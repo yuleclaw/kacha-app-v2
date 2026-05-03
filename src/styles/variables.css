@@ -1,0 +1,87 @@
+:root,
+[data-theme='light'] {
+  --color-primary: #7F77DD;
+  --color-primary-light: #AFA9EC;
+  --color-primary-dark: #534AB7;
+  --color-primary-bg: #EEEDFE;
+
+  --color-bg: #F5F5F7;
+  --color-surface: #FFFFFF;
+  --color-surface-secondary: #F0F0F2;
+
+  --color-text-primary: #1C1C1E;
+  --color-text-secondary: #6E6E73;
+  --color-text-tertiary: #AEAEB2;
+
+  --color-border: rgba(0, 0, 0, 0.08);
+  --color-border-hover: rgba(0, 0, 0, 0.15);
+
+  --color-success: #34C759;
+  --color-success-bg: #E8F8ED;
+  --color-warning: #FF9500;
+  --color-warning-bg: #FFF3E0;
+  --color-danger: #FF3B30;
+  --color-danger-bg: #FFEBEA;
+  --color-info: #007AFF;
+  --color-info-bg: #E5F1FF;
+
+  --color-flash: #FF3B30;
+  --color-anniversary: #FF2D55;
+  --color-expiry: #FF9500;
+  --color-warranty: #007AFF;
+  --color-coupon: #5856D6;
+  --color-schedule: #34C759;
+  --color-travel: #00C7BE;
+  --color-expense: #FF9500;
+
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 20px;
+  --radius-full: 9999px;
+
+  --spacing-xs: 4px;
+  --spacing-sm: 8px;
+  --spacing-md: 12px;
+  --spacing-lg: 16px;
+  --spacing-xl: 20px;
+  --spacing-2xl: 24px;
+
+  --font-xs: 11px;
+  --font-sm: 12px;
+  --font-md: 14px;
+  --font-lg: 16px;
+  --font-xl: 18px;
+  --font-2xl: 22px;
+  --font-3xl: 28px;
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.04);
+  --shadow-md: 0 2px 8px rgba(0, 0, 0, 0.08);
+  --shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.12);
+
+  --tab-bar-height: 56px;
+  --header-height: 48px;
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+[data-theme='dark'] {
+  --color-bg: #000000;
+  --color-surface: #1C1C1E;
+  --color-surface-secondary: #2C2C2E;
+
+  --color-text-primary: #FFFFFF;
+  --color-text-secondary: #98989D;
+  --color-text-tertiary: #636366;
+
+  --color-border: rgba(255, 255, 255, 0.1);
+  --color-border-hover: rgba(255, 255, 255, 0.2);
+
+  --color-success-bg: #1C2E1F;
+  --color-warning-bg: #2E2416;
+  --color-danger-bg: #2E1614;
+  --color-info-bg: #142638;
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.2);
+  --shadow-md: 0 2px 8px rgba(0, 0, 0, 0.3);
+  --shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.4);
+}
