@@ -137,8 +137,8 @@ export default function HomePage({ onNavigate }: HomePageProps) {
               </div>
             </div>
           </div>
-        )
-      }))
+        )</>
+    })
 
       {/* Attention List */}
       {attentionList.length > 0 && (
