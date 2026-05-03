@@ -90,10 +90,10 @@ export default function HomePage({ onNavigate }: HomePageProps) {
             ))}
           </div>
         ) : (
-          <div style={{ color: 'rgba(255,255,255,0.6)', fontSize: 'var(--font-sm)' }}>
-            暂无纪念日，点击添加
-          </div>
-        \}
+        <div style={{ color: 'rgba(255,255,255,0.6)', fontSize: 'var(--font-sm)' }}>
+          暂无纪念日，点击添加
+        </div>
+      )}
       </div>
 
       {/* Flash Sale Reminder */}
@@ -138,7 +138,7 @@ export default function HomePage({ onNavigate }: HomePageProps) {
             </div>
           </div>
         )
-      )}
+      })}
 
       {/* Attention List */}
       {attentionList.length > 0 && (
@@ -243,3 +243,4 @@ export default function HomePage({ onNavigate }: HomePageProps) {
     </div>
   )
 }
+
