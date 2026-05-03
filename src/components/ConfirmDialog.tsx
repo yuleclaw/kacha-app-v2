@@ -1,6 +1,7 @@
 import React from 'react'
 
 interface ConfirmDialogProps {
+  open?: boolean
   title: string
   message: string
   confirmText?: string
@@ -11,6 +12,7 @@ interface ConfirmDialogProps {
 }
 
 export default function ConfirmDialog({
+  open,
   title,
   message,
   confirmText = '确认',
@@ -19,6 +21,7 @@ export default function ConfirmDialog({
   onConfirm,
   onCancel,
 }: ConfirmDialogProps) {
+  if (open === false) return null
   return (
     <div className="confirm-dialog" onClick={onCancel}>
       <div className="confirm-box" onClick={e => e.stopPropagation()}>
