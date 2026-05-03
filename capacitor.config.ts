@@ -1,6 +1,4 @@
-import { defineConfig } from '@capacitor/cli';
-
-export default defineConfig({
+export default {
   appId: 'com.kacha.app',
   appName: 'kacha',
   webDir: 'dist',
@@ -29,4 +27,4 @@ export default defineConfig({
       releaseType: 'APK',
     },
   },
-});
+};
