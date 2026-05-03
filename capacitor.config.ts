@@ -1,30 +1,32 @@
-{
-  "appId": "com.kacha.app",
-  "appName": "咔嚓",
-  "webDir": "dist",
-  "server": {
-    "androidScheme": "https"
+import { defineConfig } from '@capacitor/cli';
+
+export default defineConfig({
+  appId: 'com.kacha.app',
+  appName: 'kacha',
+  webDir: 'dist',
+  server: {
+    androidScheme: 'https',
   },
-  "plugins": {
-    "LocalNotifications": {
-      "smallIcon": "ic_stat_icon",
-      "iconColor": "#7F77DD",
-      "sound": "default"
+  plugins: {
+    LocalNotifications: {
+      smallIcon: 'ic_stat_icon',
+      iconColor: '#7F77DD',
+      sound: 'default',
     },
-    "Camera": {
-      "presentationStyle": "fullscreen"
+    Camera: {
+      presentationStyle: 'fullscreen',
     },
-    "StatusBar": {
-      "style": "DARK",
-      "backgroundColor": "#FFFFFF"
-    }
+    StatusBar: {
+      style: 'DARK',
+      backgroundColor: '#FFFFFF',
+    },
   },
-  "android": {
-    "minSdkVersion": 24,
-    "buildOptions": {
-      "keystorePath": null,
-      "keystoreAlias": null,
-      "releaseType": "APK"
-    }
-  }
-}
+  android: {
+    minSdkVersion: 24,
+    buildOptions: {
+      keystorePath: null,
+      keystoreAlias: null,
+      releaseType: 'APK',
+    },
+  },
+});
