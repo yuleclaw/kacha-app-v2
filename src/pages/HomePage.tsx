@@ -130,7 +130,7 @@ export default function HomePage({ onNavigate }: HomePageProps) {
                   <div style={{ fontSize: 'var(--font-xl)', fontWeight: 700, color: 'var(--color-danger)' }}>
                     {countdown.days}天
                   </div>
-                \}
+                }
                 <div style={{ fontSize: 'var(--font-md)', fontWeight: 600, color: 'var(--color-danger)' }}>
                   {countdown.hours}时{countdown.minutes}分
                 </div>
