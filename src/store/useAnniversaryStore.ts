@@ -4,6 +4,11 @@ import { loadFromStorage, saveToStorage, STORAGE_KEYS } from '@/utils/storage'
 import { generateId } from '@/utils/date'
 import { getNextLunarDate } from '@/utils/lunar'
 
+export interface UpcomingAnniversary extends Anniversary {
+  nextDate: string
+  days: number
+}
+
 interface AnniversaryStore {
   items: Anniversary[]
   load: () => void
@@ -11,7 +16,7 @@ interface AnniversaryStore {
   update: (id: string, item: Partial<Anniversary>) => void
   remove: (id: string) => void
   toggleNotify: (id: string) => void
-  getUpcoming: (limit?: number) => Anniversary[]
+  getUpcoming: (limit?: number) => UpcomingAnniversary[]
 }
 
 export const useAnniversaryStore = create<AnniversaryStore>((set, get) => ({
