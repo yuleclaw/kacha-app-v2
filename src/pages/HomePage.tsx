@@ -6,7 +6,7 @@ import { useCouponStore } from '@/store/useCouponStore'
 import { useScheduleStore } from '@/store/useScheduleStore'
 import { formatCountdown, formatCountdownDetailed, formatFlashCountdown, formatTime } from '@/utils/date'
 import { formatLunar } from '@/utils/lunar'
-import { PLATFORM_LABELS } from '@/types'
+import { PLATFORM_LABELS, Anniversary, FlashSale, ExpiryItem, Coupon, Schedule } from '@/types'
 
 interface HomePageProps {
   onNavigate: (page: string) => void
@@ -23,8 +23,8 @@ export default function HomePage({ onNavigate }: HomePageProps) {
     loadAnn(); loadFlash(); loadExpiry(); loadCoupon(); loadSchedule()
   }, [])
 
-  const upcomingAnn = useAnniversaryStore(s => s.getUpcoming(3))()
-  const upcomingFlash = useFlashStore(s => s.getUpcoming())()
+  const upcomingAnn: Anniversary[] = useAnniversaryStore(s => s.getUpcoming(3))
+  const upcomingFlash: FlashSale[] = useFlashStore(s => s.getUpcoming())
   const expiredItems = getExpired()
   const expiringItems = getExpiringSoon(7)
   const expiringCoupons = getCouponExpiring(3)
@@ -32,20 +32,20 @@ export default function HomePage({ onNavigate }: HomePageProps) {
 
   // Build attention list based on priority
   const attentionList: { id: string; icon: string; text: string; color: string; page: string }[] = []
-  upcomingFlash.forEach(f => attentionList.push({
-    id: f.id, icon: '⚡', text: `${f.productName} 即将开抢`, color: 'var(--color-flash)', page: 'flash'
+  upcomingFlash.forEach((f: FlashSale) => attentionList.push({
+    id: f.id, icon: '?', text: `${f.productName} 即将开抢`, color: 'var(--color-flash)', page: 'flash'
   }))
-  expiringCoupons.forEach(c => attentionList.push({
-    id: c.id, icon: '🎫', text: `${c.name} 即将过期`, color: 'var(--color-coupon)', page: 'coupon'
+  expiringCoupons.forEach((c: Coupon) => attentionList.push({
+    id: c.id, icon: '??', text: `${c.name} 即将过期`, color: 'var(--color-coupon)', page: 'coupon'
   }))
-  expiredItems.forEach(i => attentionList.push({
-    id: i.id, icon: '📦', text: `${i.name} 已过期`, color: 'var(--color-danger)', page: 'expiry'
+  expiredItems.forEach((i: ExpiryItem) => attentionList.push({
+    id: i.id, icon: '??', text: `${i.name} 已过期`, color: 'var(--color-danger)', page: 'expiry'
   }))
-  expiringItems.forEach(i => attentionList.push({
-    id: i.id, icon: '📦', text: `${i.name} 即将过期`, color: 'var(--color-expiry)', page: 'expiry'
+  expiringItems.forEach((i: ExpiryItem) => attentionList.push({
+    id: i.id, icon: '??', text: `${i.name} 即将过期`, color: 'var(--color-expiry)', page: 'expiry'
   }))
-  upcomingAnn.forEach(a => attentionList.push({
-    id: a.id, icon: '💜', text: `${a.title} 还有${a.days}天`, color: 'var(--color-anniversary)', page: 'anniversary'
+  upcomingAnn.forEach((a: Anniversary) => attentionList.push({
+    id: a.id, icon: '??', text: `${a.title} 还有${a.days}天`, color: 'var(--color-anniversary)', page: 'anniversary'
   }))
 
   return (
@@ -58,12 +58,12 @@ export default function HomePage({ onNavigate }: HomePageProps) {
         marginBottom: 'var(--spacing-md)',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-sm)', marginBottom: 'var(--spacing-sm)' }}>
-          <span style={{ fontSize: '14px' }}>💜</span>
+          <span style={{ fontSize: '14px' }}>??</span>
           <span style={{ color: 'rgba(255,255,255,0.8)', fontSize: 'var(--font-sm)' }}>纪念日倒计时</span>
         </div>
         {upcomingAnn.length > 0 ? (
           <div style={{ display: 'flex', gap: 'var(--spacing-md)', overflowX: 'auto', paddingBottom: '4px' }}>
-            {upcomingAnn.map(a => (
+            {upcomingAnn.map((a: Anniversary) => (
               <div
                 key={a.id}
                 onClick={() => onNavigate('anniversary')}
@@ -99,29 +99,31 @@ export default function HomePage({ onNavigate }: HomePageProps) {
       {/* Flash Sale Reminder */}
       {upcomingFlash.length > 0 && (
         <div className="section-title">
-          <span className="section-title-text">⚡ 秒杀提醒</span>
+          <span className="section-title-text">? 秒杀提醒</span>
           <span className="section-title-more" onClick={() => onNavigate('flash')}>查看全部</span>
         </div>
       )}
-      {upcomingFlash.slice(0, 2).map(f => {
+      {upcomingFlash.slice(0, 2).map((f: FlashSale) => {
         const countdown = formatFlashCountdown(f.startTime)
         return (
           <div
             key={f.id}
             className="card"
+            style={{ marginBottom: 'var(--spacing-md)', cursor: 'pointer' }}
             onClick={() => onNavigate('flash')}
-            style={{ cursor: 'pointer' }}
           >
-            <div className="flex items-center justify-between">
-              <div>
-                <div style={{ fontWeight: 600, fontSize: 'var(--font-md)' }} className="truncate">{f.productName}</div>
-                <div className="flex items-center gap-sm mt-sm">
-                  <span className="tag tag-danger">{PLATFORM_LABELS[f.platform]}</span>
-                  <span className="text-secondary" style={{ fontSize: 'var(--font-sm)' }}>
-                    原价 ¥{f.originalPrice}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontWeight: 600, marginBottom: '4px' }}>{f.productName}</div>
+                <div style={{ fontSize: 'var(--font-xs)', color: 'var(--color-text-secondary)' }}>
+                  {PLATFORM_LABELS[f.platform] || f.platform}
+                </div>
+                <div style={{ marginTop: 'var(--spacing-sm)' }}>
+                  <span style={{ textDecoration: 'line-through', color: 'var(--color-text-tertiary)', fontSize: 'var(--font-sm)', marginRight: '8px' }}>
+                    ￥{f.originalPrice}
                   </span>
                   <span className="text-danger" style={{ fontWeight: 600 }}>
-                    ¥{f.salePrice}
+                    ￥{f.salePrice}
                   </span>
                 </div>
               </div>
@@ -144,7 +146,7 @@ export default function HomePage({ onNavigate }: HomePageProps) {
       {attentionList.length > 0 && (
         <>
           <div className="section-title">
-            <span className="section-title-text">🔔 需关注</span>
+            <span className="section-title-text">?? 需关注</span>
           </div>
           {attentionList.slice(0, 5).map(item => (
             <div
@@ -171,10 +173,10 @@ export default function HomePage({ onNavigate }: HomePageProps) {
       {todaySchedules.length > 0 && (
         <>
           <div className="section-title">
-            <span className="section-title-text">📅 今日日程</span>
+            <span className="section-title-text">?? 今日日程</span>
             <span className="section-title-more" onClick={() => onNavigate('schedule')}>查看全部</span>
           </div>
-          {todaySchedules.map(s => (
+          {todaySchedules.map((s: Schedule) => (
             <div
               key={s.id}
               className="list-item"
@@ -186,7 +188,7 @@ export default function HomePage({ onNavigate }: HomePageProps) {
               </div>
               <div className="list-item-content">
                 <div className="list-item-title">{s.title}</div>
-                {s.location && <div className="list-item-subtitle">📍 {s.location}</div>}
+                {s.location && <div className="list-item-subtitle">?? {s.location}</div>}
               </div>
             </div>
           ))}
@@ -206,7 +208,7 @@ export default function HomePage({ onNavigate }: HomePageProps) {
             width: '52px', height: '52px', borderRadius: 'var(--radius-lg)',
             background: 'var(--color-info-bg)', display: 'flex', alignItems: 'center',
             justifyContent: 'center', margin: '0 auto var(--spacing-sm)', fontSize: '22px'
-          }}>📸</div>
+          }}>??</div>
           <span style={{ fontSize: 'var(--font-sm)' }}>扫描</span>
         </div>
         <div
@@ -217,7 +219,7 @@ export default function HomePage({ onNavigate }: HomePageProps) {
             width: '52px', height: '52px', borderRadius: 'var(--radius-lg)',
             background: 'var(--color-primary-bg)', display: 'flex', alignItems: 'center',
             justifyContent: 'center', margin: '0 auto var(--spacing-sm)', fontSize: '22px'
-          }}>📊</div>
+          }}>??</div>
           <span style={{ fontSize: 'var(--font-sm)' }}>统计</span>
         </div>
         <div
@@ -228,7 +230,7 @@ export default function HomePage({ onNavigate }: HomePageProps) {
             width: '52px', height: '52px', borderRadius: 'var(--radius-lg)',
             background: 'var(--color-success-bg)', display: 'flex', alignItems: 'center',
             justifyContent: 'center', margin: '0 auto var(--spacing-sm)', fontSize: '22px'
-          }}>⚙️</div>
+          }}>??</div>
           <span style={{ fontSize: 'var(--font-sm)' }}>设置</span>
         </div>
       </div>
@@ -236,12 +238,10 @@ export default function HomePage({ onNavigate }: HomePageProps) {
       {/* Empty state when nothing */}
       {attentionList.length === 0 && todaySchedules.length === 0 && upcomingFlash.length === 0 && (
         <div className="empty-state">
-          <div className="empty-state-icon">🎉</div>
+          <div className="empty-state-icon">??</div>
           <div className="empty-state-text">一切正常，没有需要关注的事项</div>
         </div>
       )}
     </div>
   )
 }
-
-
