@@ -1,12 +1,12 @@
 import React, { useEffect } from 'react'
-import { useAnniversaryStore } from '@/store/useAnniversaryStore'
+import { useAnniversaryStore, UpcomingAnniversary } from '@/store/useAnniversaryStore'
 import { useFlashStore } from '@/store/useFlashStore'
 import { useExpiryStore } from '@/store/useExpiryStore'
 import { useCouponStore } from '@/store/useCouponStore'
 import { useScheduleStore } from '@/store/useScheduleStore'
 import { formatCountdown, formatCountdownDetailed, formatFlashCountdown, formatTime } from '@/utils/date'
 import { formatLunar } from '@/utils/lunar'
-import { PLATFORM_LABELS, Anniversary, FlashSale, ExpiryItem, Coupon, Schedule } from '@/types'
+import { PLATFORM_LABELS, FlashSale, ExpiryItem, Coupon, Schedule } from '@/types'
 
 interface HomePageProps {
   onNavigate: (page: string) => void
@@ -23,7 +23,7 @@ export default function HomePage({ onNavigate }: HomePageProps) {
     loadAnn(); loadFlash(); loadExpiry(); loadCoupon(); loadSchedule()
   }, [])
 
-  const upcomingAnn: Anniversary[] = useAnniversaryStore(s => s.getUpcoming(3))
+  const upcomingAnn: UpcomingAnniversary[] = useAnniversaryStore(s => s.getUpcoming(3))
   const upcomingFlash: FlashSale[] = useFlashStore(s => s.getUpcoming())
   const expiredItems = getExpired()
   const expiringItems = getExpiringSoon(7)
@@ -44,7 +44,7 @@ export default function HomePage({ onNavigate }: HomePageProps) {
   expiringItems.forEach((i: ExpiryItem) => attentionList.push({
     id: i.id, icon: '??', text: `${i.name} 即将过期`, color: 'var(--color-expiry)', page: 'expiry'
   }))
-  upcomingAnn.forEach((a: Anniversary) => attentionList.push({
+  upcomingAnn.forEach((a: UpcomingAnniversary) => attentionList.push({
     id: a.id, icon: '??', text: `${a.title} 还有${a.days}天`, color: 'var(--color-anniversary)', page: 'anniversary'
   }))
 
@@ -63,7 +63,7 @@ export default function HomePage({ onNavigate }: HomePageProps) {
         </div>
         {upcomingAnn.length > 0 ? (
           <div style={{ display: 'flex', gap: 'var(--spacing-md)', overflowX: 'auto', paddingBottom: '4px' }}>
-            {upcomingAnn.map((a: Anniversary) => (
+            {upcomingAnn.map((a: UpcomingAnniversary) => (
               <div
                 key={a.id}
                 onClick={() => onNavigate('anniversary')}
