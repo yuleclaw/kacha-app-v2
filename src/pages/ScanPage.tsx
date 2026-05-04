@@ -1,238 +1,114 @@
-import React, { useState, useEffect, useRef } from 'react'
-import { useSettingsStore } from '@/store/useSettingsStore'
-import PageHeader from '@/components/PageHeader'
+import { useState } from 'react'
+import PageHeader from '../components/PageHeader'
+import type { PageName } from '../types'
 
 interface ScanPageProps {
-  mode?: string
+  mode: string
   onBack: () => void
-  onRecognized: (type: string, data: Record<string, string>) => void
+  onRecognized: (type: PageName) => void
 }
 
-export default function ScanPage({ mode = 'auto', onBack, onRecognized }: ScanPageProps) {
-  const { settings } = useSettingsStore()
-  const [activeTab, setActiveTab] = useState(mode === 'paste' ? 'paste' : mode)
-  const [imageSrc, setImageSrc] = useState<string | null>(null)
-  const [ocrText, setOcrText] = useState('')
-  const [result, setResult] = useState<Record<string, string> | null>(null)
-  const [loading, setLoading] = useState(false)
-  const fileInputRef = useRef<HTMLInputElement>(null)
+const SCAN_MODES = [
+  { key: 'auto', label: '自动', icon: '🤖' },
+  { key: 'coupon', label: '优惠券', icon: '🎫' },
+  { key: 'flash', label: '秒杀', icon: '⚡' },
+  { key: 'schedule', label: '日程', icon: '📅' },
+  { key: 'travel', label: '行程', icon: '✈️' },
+  { key: 'warranty', label: '保修', icon: '🔧' },
+  { key: 'anniversary', label: '纪念日', icon: '💜' },
+]
 
-  // Try local tesseract first, then fallback to cloud OCR
-  const runOCR = async (imageData: string | Blob): Promise<string> => {
-    setLoading(true)
-    try {
-      // Try local tesseract.js first
-      const Tesseract = (await import('tesseract.js')).default
-      const worker = await Tesseract.createWorker('chi_sim+eng', 1, {
-        logger: m => console.log(m),
-      })
-      const { data } = await worker.recognize(imageData)
-      await worker.terminate()
-      setLoading(false)
-      return data.text
-    } catch (e) {
-      console.log('Local OCR failed, trying cloud...', e)
-      // Fallback to cloud OCR (RapidOCR server)
-      if (settings.ocrServerUrl) {
-        try {
-          const formData = new FormData()
-          if (typeof imageData === 'string') {
-            const response = await fetch(imageData)
-            const blob = await response.blob()
-            formData.append('image', blob, 'scan.jpg')
-          } else {
-            formData.append('image', imageData, 'scan.jpg')
-          }
-          const res = await fetch(`${settings.ocrServerUrl}/ocr`, { method: 'POST', body: formData })
-          const data = await res.json()
-          setLoading(false)
-          return data.text || ''
-        } catch (e2) {
-          console.error('Cloud OCR failed:', e2)
-        }
-      }
-      setLoading(false)
-      return 'OCR识别失败，请手动输入。'
-    }
+export default function ScanPage({ mode, onBack, onRecognized }: ScanPageProps) {
+  const [currentMode, setCurrentMode] = useState(mode || 'auto')
+  const [scanResult, setScanResult] = useState('')
+  const [isScanning, setIsScanning] = useState(false)
+
+  const handleScan = () => {
+    setIsScanning(true)
+    // In a real app, this would call the Capacitor Camera API
+    // For now, simulate with a text input
+    setTimeout(() => {
+      setIsScanning(false)
+    }, 1500)
   }
 
-  const handleCamera = async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
-      const video = document.createElement('video')
-      video.srcObject = stream
-      await video.play()
-      const canvas = document.createElement('canvas')
-      canvas.width = video.videoWidth
-      canvas.height = video.videoHeight
-      const ctx = canvas.getContext('2d')!
-      ctx.drawImage(video, 0, 0)
-      stream.getTracks().forEach(t => t.stop())
-      canvas.toBlob(async (blob) => {
-        if (blob) { setImageSrc(URL.createObjectURL(blob)); const text = await runOCR(blob); setOcrText(text); parseAndFill(text) }
-      }, 'image/jpeg', 0.9)
-    } catch {
-      // Fallback: use file input with camera capture
-      fileInputRef.current?.setAttribute('capture', 'environment')
-      fileInputRef.current?.click()
+  const handleRecognize = () => {
+    if (!scanResult.trim()) return
+    // Parse text and navigate
+    const text = scanResult.toLowerCase()
+    if (text.includes('券') || text.includes('优惠') || text.includes('折扣')) {
+      onRecognized('coupon')
+    } else if (text.includes('秒杀') || text.includes('抢购') || text.includes('闪购')) {
+      onRecognized('flash')
+    } else if (text.includes('日程') || text.includes('会议') || text.includes('预约')) {
+      onRecognized('schedule')
+    } else if (text.includes('旅行') || text.includes('行程') || text.includes('航班')) {
+      onRecognized('travel')
+    } else if (text.includes('保') || text.includes('维修') || text.includes('售后')) {
+      onRecognized('warranty')
+    } else if (text.includes('纪念') || text.includes('生日') || text.includes('周年')) {
+      onRecognized('anniversary')
+    } else {
+      alert('无法识别类型，请手动选择')
     }
   }
-
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (file) {
-      setImageSrc(URL.createObjectURL(file))
-      runOCR(file).then(text => { setOcrText(text); parseAndFill(text) })
-    }
-  }
-
-  const handlePaste = async () => {
-    const text = await navigator.clipboard.readText()
-    if (text) {
-      setOcrText(text)
-      parseAndFill(text)
-    }
-  }
-
-  const parseAndFill = (text: string) => {
-    // Simple rule-based parser
-    const data: Record<string, string> = { raw: text }
-    const lower = text.toLowerCase()
-
-    // Detect type
-    if (lower.includes('券') || lower.includes('优惠') || lower.includes('折扣') || lower.includes('满减')) {
-      data.type = 'coupon'
-    } else if (lower.includes('秒杀') || lower.includes('限时') || lower.includes('特价')) {
-      data.type = 'flash'
-    } else if (lower.includes('日程') || lower.includes('会议') || lower.includes('活动')) {
-      data.type = 'schedule'
-    } else if (lower.includes('旅行') || lower.includes('行程') || lower.includes('航班')) {
-      data.type = 'travel'
-    } else if (lower.includes('保修')) {
-      data.type = 'warranty'
-    } else if (lower.includes('纪念') || lower.includes('生日') || lower.includes('周年')) {
-      data.type = 'anniversary'
-    }
-
-    setResult(data)
-  }
-
-  const handleConfirm = () => {
-    if (result && result.type && onRecognized) {
-      onRecognized(result.type, result)
-    }
-  }
-
-  useEffect(() => {
-    if (mode === 'paste') {
-      handlePaste()
-    }
-  }, [mode])
 
   return (
-    <div className="app-container">
-      <PageHeader title="扫描识别" onBack={onBack} />
-
-      <input
-        ref={fileInputRef}
-        type="file" accept="image/*" style={{ display: 'none' }}
-        onChange={handleFileSelect}
-      />
+    <>
+      <PageHeader title="📸 扫描识别" onBack={onBack} />
 
       <div className="page">
-        {/* Tab selector */}
-        <div style={{ display: 'flex', background: 'var(--color-surface)', borderBottom: '0.5px solid var(--color-border)' }}>
-          {[
-            { key: 'auto', label: '🤖 自动' },
-            { key: 'coupon', label: '🎫 优惠券' },
-            { key: 'flash', label: '⚡ 秒杀' },
-            { key: 'schedule', label: '📅 日程' },
-            { key: 'travel', label: '✈️ 行程' },
-            { key: 'warranty', label: '🔧 保修' },
-            { key: 'anniversary', label: '💜 纪念日' },
-            { key: 'paste', label: '📋 粘贴' },
-          ].map(tab => (
-            <button
-              key={tab.key}
-              onClick={() => {
-                setActiveTab(tab.key)
-                if (tab.key === 'paste') handlePaste()
-              }}
-              style={{
-                flex: 1, padding: '10px 0', fontSize: 'var(--font-xs)',
-                background: activeTab === tab.key ? 'var(--color-primary)18' : 'transparent',
-                color: activeTab === tab.key ? 'var(--color-primary)' : 'var(--color-text-secondary)',
-                borderBottom: activeTab === tab.key ? '2px solid var(--color-primary)' : '2px solid transparent',
-              }}
-            >
-              {tab.label}
-            </button>
+        {/* Mode selector */}
+        <div style={{ display: 'flex', gap: 6, marginBottom: 16, overflowX: 'auto' }}>
+          {SCAN_MODES.map((m) => (
+            <span key={m.key} className={`tag ${currentMode === m.key ? 'tag-primary' : ''}`}
+              style={{ cursor: 'pointer', fontSize: 13, padding: '4px 10px' }}
+              onClick={() => setCurrentMode(m.key)}>
+              {m.icon} {m.label}
+            </span>
           ))}
         </div>
 
-        {/* Camera / Upload */}
-        <div style={{ padding: 'var(--spacing-xl)', textAlign: 'center' }}>
-          {!imageSrc && activeTab !== 'paste' && (
-            <div>
-              <div
-                onClick={handleCamera}
-                style={{
-                  width: '80px', height: '80px', borderRadius: '50%',
-                  background: 'var(--color-primary)', color: 'white',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: '36px', margin: '0 auto var(--spacing-md)',
-                  cursor: 'pointer', boxShadow: '0 4px 12px rgba(127,119,221,0.4)',
-                }}
-              >
-                📸
-              </div>
-              <div style={{ fontSize: 'var(--font-sm)', color: 'var(--color-text-secondary)', marginBottom: 'var(--spacing-lg)' }}>
-                点击拍照或选择图片
-              </div>
-              <button className="btn btn-secondary" onClick={() => fileInputRef.current?.click()}>
-                从相册选择
-              </button>
+        {/* Camera / Image area */}
+        <div className="card" style={{ minHeight: 200, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: 'var(--color-bg-secondary)' }}>
+          {isScanning ? (
+            <div style={{ textAlign: 'center' }}>
+              <div style={{ fontSize: 36, marginBottom: 8 }}>🔍</div>
+              <div style={{ color: 'var(--color-text-secondary)' }}>识别中...</div>
             </div>
-          )}
-
-          {imageSrc && (
-            <div style={{ marginBottom: 'var(--spacing-lg)' }}>
-              <img src={imageSrc} style={{ maxWidth: '100%', borderRadius: 'var(--radius-lg)', maxHeight: '200px', objectFit: 'cover' }} />
-              <button className="btn btn-secondary btn-sm" style={{ marginTop: 'var(--spacing-sm)' }} onClick={() => { setImageSrc(null); setOcrText(''); setResult(null) }}>重新拍照</button>
-            </div>
-          )}
-
-          {loading && (
-            <div style={{ padding: 'var(--spacing-lg)' }}>
-              <div style={{ fontSize: 'var(--font-md)', color: 'var(--color-primary)' }}>正在识别中...</div>
-            </div>
-          )}
-
-          {ocrText && !loading && (
-            <div style={{ textAlign: 'left', marginTop: 'var(--spacing-lg)' }}>
-              <div style={{ fontSize: 'var(--font-sm)', color: 'var(--color-text-secondary)', marginBottom: 'var(--spacing-sm)' }}>识别结果：</div>
-              <div style={{
-                background: 'var(--color-surface-secondary)', borderRadius: 'var(--radius-md)',
-                padding: 'var(--spacing-md)', fontSize: 'var(--font-sm)',
-                whiteSpace: 'pre-wrap', maxHeight: '150px', overflow: 'auto',
-              }}>
-                {ocrText}
+          ) : (
+            <div style={{ textAlign: 'center' }}>
+              <div style={{ fontSize: 48, marginBottom: 8 }}>📷</div>
+              <div className="btn-group" style={{ display: 'flex', gap: 12 }}>
+                <button className="btn btn-primary" onClick={handleScan}>拍照识别</button>
+                <button className="btn btn-ghost" onClick={handleScan}>从相册选择</button>
               </div>
-
-              {result && result.type && (
-                <div style={{ marginTop: 'var(--spacing-lg)', textAlign: 'center' }}>
-                  <div style={{ fontSize: 'var(--font-sm)', color: 'var(--color-success)', marginBottom: 'var(--spacing-sm)' }}>
-                    已识别为：{result.type === 'coupon' ? '优惠券' : result.type === 'flash' ? '秒杀' : result.type === 'schedule' ? '日程' : result.type === 'travel' ? '旅行' : result.type === 'warranty' ? '保修' : '纪念日'}
-                  </div>
-                  <button className="btn btn-primary" onClick={handleConfirm}>
-                    确认并跳转到录入页
-                  </button>
-                </div>
-              )}
             </div>
           )}
         </div>
+
+        {/* Manual text input */}
+        <div className="card" style={{ marginTop: 12 }}>
+          <div className="form-group">
+            <label className="form-label">或粘贴文本识别</label>
+            <textarea className="form-textarea" rows={4}
+              value={scanResult} onChange={(e) => setScanResult(e.target.value)}
+              placeholder="粘贴扫描识别的文本，或手动输入商品信息..." />
+          </div>
+          <button className="btn btn-primary" style={{ width: '100%' }} onClick={handleRecognize}
+            disabled={!scanResult.trim()}>
+            识别并跳转
+          </button>
+        </div>
+
+        {/* Recognized results display */}
+        {scanResult && (
+          <div className="card">
+            <div className="card-title">识别结果</div>
+            <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', marginTop: 4, whiteSpace: 'pre-wrap' }}>{scanResult}</div>
+          </div>
+        )}
       </div>
-    </div>
+    </>
   )
 }

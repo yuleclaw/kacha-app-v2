@@ -1,24 +1,18 @@
-import React from 'react'
+import type { ReactNode } from 'react'
 
 interface ModalProps {
-  open: boolean
+  open?: boolean
+  title: string
   onClose: () => void
-  title?: string
-  children: React.ReactNode
+  children: ReactNode
 }
 
-export default function Modal({ open, onClose, title, children }: ModalProps) {
-  if (!open) return null
-
+export default function Modal({ open, title, onClose, children }: ModalProps) {
+  if (open === false) return null
   return (
     <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-sheet" onClick={e => e.stopPropagation()}>
-        <div className="modal-handle" />
-        {title && (
-          <div style={{ fontSize: 'var(--font-lg)', fontWeight: 600, marginBottom: 'var(--spacing-xl)', textAlign: 'center' }}>
-            {title}
-          </div>
-        )}
+      <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+        <h2 className="modal-title">{title}</h2>
         {children}
       </div>
     </div>

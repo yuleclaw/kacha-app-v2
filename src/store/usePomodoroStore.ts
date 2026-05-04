@@ -1,59 +1,42 @@
 import { create } from 'zustand'
-import { loadFromStorage, saveToStorage, STORAGE_KEYS } from '@/utils/storage'
 
-interface PomodoroRecord {
-  date: string
-  count: number
-}
+type TimerStatus = 'idle' | 'running' | 'paused'
+type TimerMode = 'work' | 'break'
 
 interface PomodoroStore {
-  records: PomodoroRecord[]
-  load: () => void
-  addToday: () => void
-  getTodayCount: () => number
-  getWeekCount: () => number
-  getMonthCount: () => number
+  mode: TimerMode
+  status: TimerStatus
+  workMinutes: number
+  breakMinutes: number
+  secondsLeft: number
+  completedToday: number
+  setMode: (mode: TimerMode) => void
+  setStatus: (status: TimerStatus) => void
+  setWorkMinutes: (m: number) => void
+  setBreakMinutes: (m: number) => void
+  setSecondsLeft: (s: number) => void
+  setCompletedToday: (n: number) => void
+  incrementCompleted: () => void
+  reset: () => void
 }
 
-export const usePomodoroStore = create<PomodoroStore>((set, get) => ({
-  records: [],
-
-  load: () => {
-    const records = loadFromStorage<PomodoroRecord[]>(STORAGE_KEYS.POMODORO, [])
-    set({ records })
-  },
-
-  addToday: () => {
-    const today = new Date().toISOString().split('T')[0]
-    const records = [...get().records]
-    const existing = records.find(r => r.date === today)
-    if (existing) {
-      existing.count++
-    } else {
-      records.push({ date: today, count: 1 })
-    }
-    set({ records })
-    saveToStorage(STORAGE_KEYS.POMODORO, records)
-  },
-
-  getTodayCount: () => {
-    const today = new Date().toISOString().split('T')[0]
-    return get().records.find(r => r.date === today)?.count || 0
-  },
-
-  getWeekCount: () => {
-    const weekAgo = new Date()
-    weekAgo.setDate(weekAgo.getDate() - 7)
-    return get().records
-      .filter(r => new Date(r.date) >= weekAgo)
-      .reduce((sum, r) => sum + r.count, 0)
-  },
-
-  getMonthCount: () => {
-    const monthAgo = new Date()
-    monthAgo.setMonth(monthAgo.getMonth() - 1)
-    return get().records
-      .filter(r => new Date(r.date) >= monthAgo)
-      .reduce((sum, r) => sum + r.count, 0)
-  },
+export const usePomodoroStore = create<PomodoroStore>()((set, get) => ({
+  mode: 'work',
+  status: 'idle',
+  workMinutes: 25,
+  breakMinutes: 5,
+  secondsLeft: 25 * 60,
+  completedToday: 0,
+  setMode: (mode) => set({ mode }),
+  setStatus: (status) => set({ status }),
+  setWorkMinutes: (m) => set({ workMinutes: m, secondsLeft: m * 60 }),
+  setBreakMinutes: (m) => set({ breakMinutes: m }),
+  setSecondsLeft: (s) => set({ secondsLeft: s }),
+  setCompletedToday: (n) => set({ completedToday: n }),
+  incrementCompleted: () => set((s) => ({ completedToday: s.completedToday + 1 })),
+  reset: () => set({
+    mode: 'work',
+    status: 'idle',
+    secondsLeft: get().workMinutes * 60,
+  }),
 }))

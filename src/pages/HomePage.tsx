@@ -1,247 +1,146 @@
-import React, { useEffect } from 'react'
-import { useAnniversaryStore, UpcomingAnniversary } from '@/store/useAnniversaryStore'
-import { useFlashStore } from '@/store/useFlashStore'
-import { useExpiryStore } from '@/store/useExpiryStore'
-import { useCouponStore } from '@/store/useCouponStore'
-import { useScheduleStore } from '@/store/useScheduleStore'
-import { formatCountdown, formatCountdownDetailed, formatFlashCountdown, formatTime } from '@/utils/date'
-import { formatLunar } from '@/utils/lunar'
-import { PLATFORM_LABELS, FlashSale, ExpiryItem, Coupon, Schedule } from '@/types'
+import { useState, useEffect } from 'react'
+import type { PageName } from '../types'
+import { useAnniversaryStore } from '../store/useAnniversaryStore'
+import { useFlashStore } from '../store/useFlashStore'
+import { useExpiryStore } from '../store/useExpiryStore'
+import { useCouponStore } from '../store/useCouponStore'
+import { useWarrantyStore } from '../store/useWarrantyStore'
+import { useScheduleStore } from '../store/useScheduleStore'
+import { daysFromToday, getCountdownText } from '../utils/date'
 
 interface HomePageProps {
-  onNavigate: (page: string) => void
+  onNavigate: (page: PageName) => void
 }
 
 export default function HomePage({ onNavigate }: HomePageProps) {
-  const { load: loadAnn, items: annItems } = useAnniversaryStore()
-  const { load: loadFlash, items: flashItems } = useFlashStore()
-  const { load: loadExpiry, getExpired, getExpiringSoon } = useExpiryStore()
-  const { load: loadCoupon, getExpiringSoon: getCouponExpiring } = useCouponStore()
-  const { load: loadSchedule, getToday } = useScheduleStore()
+  const upcoming = useAnniversaryStore((s) => s.getUpcoming(3))
+  const flashItems = useFlashStore((s) => s.items)
+  const expiryItems = useExpiryStore((s) => s.items)
+  const couponItems = useCouponStore((s) => s.items)
+  const warrantyItems = useWarrantyStore((s) => s.items)
+  const scheduleItems = useScheduleStore((s) => s.items)
+  const [now, setNow] = useState(Date.now())
 
   useEffect(() => {
-    loadAnn(); loadFlash(); loadExpiry(); loadCoupon(); loadSchedule()
+    const timer = setInterval(() => setNow(Date.now()), 60000)
+    return () => clearInterval(timer)
   }, [])
 
-  const upcomingAnn: UpcomingAnniversary[] = useAnniversaryStore(s => s.getUpcoming(3))
-  const upcomingFlash: FlashSale[] = useFlashStore(s => s.getUpcoming())
-  const expiredItems = getExpired()
-  const expiringItems = getExpiringSoon(7)
-  const expiringCoupons = getCouponExpiring(3)
-  const todaySchedules = getToday()
+  const todaySchedules = scheduleItems.filter((s) =>
+    s.startTime.startsWith(new Date().toISOString().slice(0, 10)),
+  ).sort((a, b) => a.startTime.localeCompare(b.startTime))
 
-  // Build attention list based on priority
-  const attentionList: { id: string; icon: string; text: string; color: string; page: string }[] = []
-  upcomingFlash.forEach((f: FlashSale) => attentionList.push({
-    id: f.id, icon: '?', text: `${f.productName} 即将开抢`, color: 'var(--color-flash)', page: 'flash'
-  }))
-  expiringCoupons.forEach((c: Coupon) => attentionList.push({
-    id: c.id, icon: '??', text: `${c.name} 即将过期`, color: 'var(--color-coupon)', page: 'coupon'
-  }))
-  expiredItems.forEach((i: ExpiryItem) => attentionList.push({
-    id: i.id, icon: '??', text: `${i.name} 已过期`, color: 'var(--color-danger)', page: 'expiry'
-  }))
-  expiringItems.forEach((i: ExpiryItem) => attentionList.push({
-    id: i.id, icon: '??', text: `${i.name} 即将过期`, color: 'var(--color-expiry)', page: 'expiry'
-  }))
-  upcomingAnn.forEach((a: UpcomingAnniversary) => attentionList.push({
-    id: a.id, icon: '??', text: `${a.title} 还有${a.days}天`, color: 'var(--color-anniversary)', page: 'anniversary'
-  }))
+  const expiringExpiry = expiryItems.filter((i) => {
+    const d = daysFromToday(i.expiryDate)
+    return d >= 0 && d <= 7
+  }).length
+
+  const expiredCoupons = couponItems.filter((i) => daysFromToday(i.expiryDate) < 0).length
+  const expiringWarranty = warrantyItems.filter((i) => {
+    const d = daysFromToday(i.warrantyExpiry)
+    return d >= 0 && d <= 30
+  }).length
+
+  const rules: { label: string; count: number; color: string; type: PageName }[] = [
+    { label: '即将秒杀', count: flashItems.filter((f) => getCountdownText(f.startTime) !== '已开始' && daysFromToday(f.startTime.split(' ')[0] ?? '') >= -1).length, color: 'var(--color-danger)', type: 'flash' },
+    { label: '过期优惠券', count: expiredCoupons, color: 'var(--color-warning)', type: 'coupon' },
+    { label: '临期物品', count: expiringExpiry, color: 'var(--color-warning)', type: 'expiry' },
+    { label: '临保定保', count: expiringWarranty, color: 'var(--color-primary)', type: 'warranty' },
+    { label: '即将纪念日', count: upcoming.length, color: 'var(--color-danger)', type: 'anniversary' },
+    { label: '今日日程', count: todaySchedules.length, color: 'var(--color-success)', type: 'schedule' },
+  ]
 
   return (
-    <div className="page">
-      {/* Hero - Anniversary Countdown */}
-      <div style={{
-        background: 'linear-gradient(135deg, var(--color-primary), var(--color-primary-dark))',
-        padding: 'var(--spacing-xl) var(--spacing-lg)',
-        borderRadius: '0 0 var(--radius-xl) var(--radius-xl)',
-        marginBottom: 'var(--spacing-md)',
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-sm)', marginBottom: 'var(--spacing-sm)' }}>
-          <span style={{ fontSize: '14px' }}>??</span>
-          <span style={{ color: 'rgba(255,255,255,0.8)', fontSize: 'var(--font-sm)' }}>纪念日倒计时</span>
-        </div>
-        {upcomingAnn.length > 0 ? (
-          <div style={{ display: 'flex', gap: 'var(--spacing-md)', overflowX: 'auto', paddingBottom: '4px' }}>
-            {upcomingAnn.map((a: UpcomingAnniversary) => (
-              <div
-                key={a.id}
-                onClick={() => onNavigate('anniversary')}
-                style={{
-                  background: 'rgba(255,255,255,0.2)',
-                  borderRadius: 'var(--radius-lg)',
-                  padding: 'var(--spacing-md) var(--spacing-lg)',
-                  minWidth: '140px',
-                  cursor: 'pointer',
-                  flexShrink: 0,
-                }}
-              >
-                <div style={{ color: 'white', fontSize: 'var(--font-3xl)', fontWeight: 700 }}>
-                  {a.days > 0 ? a.days : 0}
-                </div>
-                <div style={{ color: 'rgba(255,255,255,0.8)', fontSize: 'var(--font-sm)' }}>天</div>
-                <div style={{ color: 'white', fontSize: 'var(--font-md)', marginTop: 'var(--spacing-sm)', fontWeight: 500 }} className="truncate">
-                  {a.title}
-                </div>
-                <div style={{ color: 'rgba(255,255,255,0.6)', fontSize: 'var(--font-xs)', marginTop: '2px' }}>
-                  {formatLunar(a.date)}
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : (
-        <div style={{ color: 'rgba(255,255,255,0.6)', fontSize: 'var(--font-sm)' }}>
-          暂无纪念日，点击添加
-        </div>
-      )}
-      </div>
-
-      {/* Flash Sale Reminder */}
-      {upcomingFlash.length > 0 && (
-        <div className="section-title">
-          <span className="section-title-text">? 秒杀提醒</span>
-          <span className="section-title-more" onClick={() => onNavigate('flash')}>查看全部</span>
-        </div>
-      )}
-      {upcomingFlash.slice(0, 2).map((f: FlashSale) => {
-        const countdown = formatFlashCountdown(f.startTime)
-        return (
-          <div
-            key={f.id}
-            className="card"
-            style={{ marginBottom: 'var(--spacing-md)', cursor: 'pointer' }}
-            onClick={() => onNavigate('flash')}
-          >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div style={{ flex: 1 }}>
-                <div style={{ fontWeight: 600, marginBottom: '4px' }}>{f.productName}</div>
-                <div style={{ fontSize: 'var(--font-xs)', color: 'var(--color-text-secondary)' }}>
-                  {PLATFORM_LABELS[f.platform] || f.platform}
-                </div>
-                <div style={{ marginTop: 'var(--spacing-sm)' }}>
-                  <span style={{ textDecoration: 'line-through', color: 'var(--color-text-tertiary)', fontSize: 'var(--font-sm)', marginRight: '8px' }}>
-                    ￥{f.originalPrice}
-                  </span>
-                  <span className="text-danger" style={{ fontWeight: 600 }}>
-                    ￥{f.salePrice}
-                  </span>
-                </div>
-              </div>
-              <div style={{ textAlign: 'center', flexShrink: 0 }}>
-                {countdown.days > 0 && (
-                  <div style={{ fontSize: 'var(--font-xl)', fontWeight: 700, color: 'var(--color-danger)' }}>
-                    {countdown.days}天
-                  </div>
-                )}
-                <div style={{ fontSize: 'var(--font-md)', fontWeight: 600, color: 'var(--color-danger)' }}>
-                  {countdown.hours}时{countdown.minutes}分
-                </div>
-              </div>
+    <div className="page" style={{ paddingTop: 'var(--safe-top)' }}>
+      {/* Hero Section - Anniversary */}
+      <div className="card" style={{ background: 'linear-gradient(135deg, #E8F0FE, #FCEBEB)', border: 'none', marginTop: 8 }}>
+        <div style={{ fontSize: 13, color: 'var(--color-text-secondary)', marginBottom: 8 }}>💜 纪念日</div>
+        <div style={{ display: 'flex', gap: 12, overflowX: 'auto', paddingBottom: 4 }}>
+          {upcoming.length === 0 ? (
+            <div style={{ fontSize: 14, color: 'var(--color-text-tertiary)', width: '100%', textAlign: 'center', padding: '12px 0' }}>
+              还没有纪念日，点击➕添加
             </div>
-          </div>
-        )
-      })}
-
-      {/* Attention List */}
-      {attentionList.length > 0 && (
-        <>
-          <div className="section-title">
-            <span className="section-title-text">?? 需关注</span>
-          </div>
-          {attentionList.slice(0, 5).map(item => (
-            <div
-              key={item.id}
-              className="list-item"
-              onClick={() => onNavigate(item.page)}
-              style={{ cursor: 'pointer' }}
-            >
-              <div className="list-item-icon" style={{ background: item.color + '18', fontSize: '18px' }}>
-                {item.icon}
+          ) : upcoming.map((a) => (
+            <div key={a.id} className="card" style={{ minWidth: 140, flexShrink: 0, marginBottom: 0, cursor: 'pointer' }}
+              onClick={() => onNavigate('anniversary')}>
+              <div style={{ fontSize: 28, fontWeight: 700, color: 'var(--color-danger)' }}>
+                {a.days > 0 ? `${a.days}天` : a.days === 0 ? '今天' : '已过'}
               </div>
-              <div className="list-item-content">
-                <div className="list-item-title">{item.text}</div>
-              </div>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-text-tertiary)" strokeWidth="2" strokeLinecap="round">
-                <path d="M9 18l6-6-6-6" />
-              </svg>
+              <div style={{ fontSize: 13, marginTop: 4 }}>{a.title}</div>
+              <div style={{ fontSize: 11, color: 'var(--color-text-tertiary)', marginTop: 2 }}>{a.nextDate}</div>
             </div>
           ))}
-        </>
-      )}
+        </div>
+      </div>
+
+      {/* Flash Sales */}
+      <div className="card" style={{ cursor: 'pointer' }} onClick={() => onNavigate('flash')}>
+        <div className="card-header">
+          <span className="card-title">⚡ 秒杀提醒</span>
+          {flashItems.length > 0 && <span className="tag tag-danger">{flashItems.length}</span>}
+        </div>
+        {flashItems.length === 0 ? (
+          <div className="text-sm text-secondary">暂无秒杀活动</div>
+        ) : (
+          flashItems.slice(0, 3).map((f) => (
+            <div key={f.id} className="flex-between" style={{ padding: '4px 0' }}>
+              <span style={{ fontSize: 13 }}>{f.productName}</span>
+              <span style={{ fontSize: 11, color: 'var(--color-danger)' }}>{getCountdownText(f.startTime)}</span>
+            </div>
+          ))
+        )}
+      </div>
+
+      {/* Attention Rules */}
+      <div className="card">
+        <div className="card-header">
+          <span className="card-title">🔔 需关注</span>
+        </div>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+          {rules.filter(r => r.count > 0).map((r) => (
+            <span key={r.type} className="tag" style={{ background: r.color + '20', color: r.color, cursor: 'pointer' }}
+              onClick={() => onNavigate(r.type)}>
+              {r.label} {r.count}
+            </span>
+          ))}
+          {rules.every(r => r.count === 0) && (
+            <span className="text-sm text-secondary">一切正常 🎉</span>
+          )}
+        </div>
+      </div>
 
       {/* Today's Schedule */}
-      {todaySchedules.length > 0 && (
-        <>
-          <div className="section-title">
-            <span className="section-title-text">?? 今日日程</span>
-            <span className="section-title-more" onClick={() => onNavigate('schedule')}>查看全部</span>
-          </div>
-          {todaySchedules.map((s: Schedule) => (
-            <div
-              key={s.id}
-              className="list-item"
-              onClick={() => onNavigate('schedule')}
-              style={{ cursor: 'pointer' }}
-            >
-              <div className="list-item-icon" style={{ background: 'var(--color-schedule)18', color: 'var(--color-schedule)', fontWeight: 600, fontSize: 'var(--font-sm)' }}>
-                {formatTime(s.startTime)}
-              </div>
-              <div className="list-item-content">
-                <div className="list-item-title">{s.title}</div>
-                {s.location && <div className="list-item-subtitle">?? {s.location}</div>}
-              </div>
+      <div className="card" style={{ cursor: 'pointer' }} onClick={() => onNavigate('schedule')}>
+        <div className="card-header">
+          <span className="card-title">📅 今日日程</span>
+          {todaySchedules.length > 0 && <span className="tag tag-success">{todaySchedules.length}</span>}
+        </div>
+        {todaySchedules.length === 0 ? (
+          <div className="text-sm text-secondary">今天没有日程安排</div>
+        ) : (
+          todaySchedules.slice(0, 5).map((s) => (
+            <div key={s.id} className="flex-between" style={{ padding: '4px 0' }}>
+              <span style={{ fontSize: 13 }}>{s.title}</span>
+              <span style={{ fontSize: 11, color: 'var(--color-text-tertiary)' }}>
+                {s.startTime.slice(11, 16)}
+              </span>
             </div>
-          ))}
-        </>
-      )}
-
-      {/* Quick Shortcuts */}
-      <div className="section-title">
-        <span className="section-title-text">快捷入口</span>
-      </div>
-      <div style={{ display: 'flex', gap: 'var(--spacing-md)', padding: '0 var(--spacing-lg) var(--spacing-lg)' }}>
-        <div
-          onClick={() => onNavigate('scan')}
-          style={{ flex: 1, textAlign: 'center', cursor: 'pointer' }}
-        >
-          <div style={{
-            width: '52px', height: '52px', borderRadius: 'var(--radius-lg)',
-            background: 'var(--color-info-bg)', display: 'flex', alignItems: 'center',
-            justifyContent: 'center', margin: '0 auto var(--spacing-sm)', fontSize: '22px'
-          }}>??</div>
-          <span style={{ fontSize: 'var(--font-sm)' }}>扫描</span>
-        </div>
-        <div
-          onClick={() => onNavigate('stats')}
-          style={{ flex: 1, textAlign: 'center', cursor: 'pointer' }}
-        >
-          <div style={{
-            width: '52px', height: '52px', borderRadius: 'var(--radius-lg)',
-            background: 'var(--color-primary-bg)', display: 'flex', alignItems: 'center',
-            justifyContent: 'center', margin: '0 auto var(--spacing-sm)', fontSize: '22px'
-          }}>??</div>
-          <span style={{ fontSize: 'var(--font-sm)' }}>统计</span>
-        </div>
-        <div
-          onClick={() => onNavigate('settings')}
-          style={{ flex: 1, textAlign: 'center', cursor: 'pointer' }}
-        >
-          <div style={{
-            width: '52px', height: '52px', borderRadius: 'var(--radius-lg)',
-            background: 'var(--color-success-bg)', display: 'flex', alignItems: 'center',
-            justifyContent: 'center', margin: '0 auto var(--spacing-sm)', fontSize: '22px'
-          }}>??</div>
-          <span style={{ fontSize: 'var(--font-sm)' }}>设置</span>
-        </div>
+          ))
+        )}
       </div>
 
-      {/* Empty state when nothing */}
-      {attentionList.length === 0 && todaySchedules.length === 0 && upcomingFlash.length === 0 && (
-        <div className="empty-state">
-          <div className="empty-state-icon">??</div>
-          <div className="empty-state-text">一切正常，没有需要关注的事项</div>
+      {/* Quick Entry */}
+      <div style={{ display: 'flex', gap: 12, marginTop: 4 }}>
+        <div className="card" style={{ flex: 1, textAlign: 'center', cursor: 'pointer' }} onClick={() => onNavigate('scan')}>
+          📸 扫描
         </div>
-      )}
+        <div className="card" style={{ flex: 1, textAlign: 'center', cursor: 'pointer' }} onClick={() => onNavigate('stats')}>
+          📊 统计
+        </div>
+        <div className="card" style={{ flex: 1, textAlign: 'center', cursor: 'pointer' }} onClick={() => onNavigate('settings')}>
+          ⚙️ 设置
+        </div>
+      </div>
     </div>
   )
 }

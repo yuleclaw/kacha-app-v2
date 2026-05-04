@@ -1,44 +1,47 @@
-import { Solar, Lunar } from 'lunar-javascript'
+import { Solar, Lunar as LunarCalendar } from 'lunar-javascript'
 
-export function toLunarDate(dateStr: string): { year: string; month: string; day: string; animal: string; ganZhiYear: string; festival: string } {
-  const [year, month, day] = dateStr.split('-').map(Number)
-  const solar = Solar.fromYmd(year, month, day)
-  const lunarObj = solar.getLunar()
+export interface LunarInfo {
+  year: string
+  month: string
+  day: string
+  full: string
+}
 
-  return {
-    year: `${lunarObj.getYearInChinese()}Äê`,
-    month: lunarObj.getMonthInChinese() + 'ÔÂ',
-    day: lunarObj.getDayInChinese(),
-    animal: lunarObj.getYearShengXiao(),
-    ganZhiYear: `${lunarObj.getYearInGanZhi()}Äê`,
-    festival: lunarObj.getFestivals()?.[0] || '',
+/** 获取指定日期的农历信息 */
+export function getLunarInfo(dateStr: string): LunarInfo | null {
+  try {
+    const d = new Date(dateStr)
+    if (isNaN(d.getTime())) return null
+    const solar = Solar.fromDate(d)
+    const lunar = solar.getLunar()
+    return {
+      year: lunar.getYearInChinese(),
+      month: lunar.getMonthInChinese(),
+      day: lunar.getDayInChinese(),
+      full: lunar.toFullString(),
+    }
+  } catch {
+    return null
   }
 }
 
-export function lunarToSolar(year: number, month: number, day: number, isLeapMonth: boolean = false): string {
-  const lunarObj = Lunar.fromYmd(year, month, day, isLeapMonth)
-  const solar = lunarObj.getSolar()
-  return `${solar.getYear()}-${String(solar.getMonth()).padStart(2, '0')}-${String(solar.getDay()).padStart(2, '0')}`
-}
-
-export function getNextLunarDate(lunarMonth: number, lunarDay: number): string {
-  const today = new Date()
-  const solar = Solar.fromDate(today)
-  const lunarObj = solar.getLunar()
-
-  let year = lunarObj.getYear()
-  if (lunarObj.getMonth() > lunarMonth || (lunarObj.getMonth() === lunarMonth && lunarObj.getDay() >= lunarDay)) {
-    year++
+/** 根据农历获取下一次公历日期 */
+export function getNextSolarDate(lunarMonth: number, lunarDay: number): string {
+  const now = new Date()
+  const year = now.getFullYear()
+  try {
+    const lunar = LunarCalendar.fromYmd(year, lunarMonth, lunarDay)
+    const solar = lunar.getSolar()
+    const dateStr = `${solar.getYear()}-${String(solar.getMonth()).padStart(2, '0')}-${String(solar.getDay()).padStart(2, '0')}`
+    const d = new Date(dateStr)
+    if (d < now) {
+      // 如果已过，取明年
+      const nextLunar = LunarCalendar.fromYmd(year + 1, lunarMonth, lunarDay)
+      const nextSolar = nextLunar.getSolar()
+      return `${nextSolar.getYear()}-${String(nextSolar.getMonth()).padStart(2, '0')}-${String(nextSolar.getDay()).padStart(2, '0')}`
+    }
+    return dateStr
+  } catch {
+    return ''
   }
-
-  const nextLunar = Lunar.fromYmd(year, lunarMonth, lunarDay)
-  const nextSolar = nextLunar.getSolar()
-  return `${nextSolar.getYear()}-${String(nextSolar.getMonth()).padStart(2, '0')}-${String(nextSolar.getDay()).padStart(2, '0')}`
-}
-
-export function formatLunar(dateStr: string): string {
-  const info = toLunarDate(dateStr)
-  let result = `${info.month}${info.day}`
-  if (info.festival) result = info.festival
-  return result
 }

@@ -1,56 +1,49 @@
-export const STORAGE_KEYS = {
-  ANNIVERSARIES: 'kacha_anniversaries',
-  FLASH_SALES: 'kacha_flash_sales',
-  EXPIRY_ITEMS: 'kacha_expiry_items',
-  WARRANTIES: 'kacha_warranties',
-  COUPONS: 'kacha_coupons',
-  EXPENSES: 'kacha_expenses',
-  SCHEDULES: 'kacha_schedules',
-  TRAVELS: 'kacha_travels',
-  SETTINGS: 'kacha_settings',
-  POMODORO: 'kacha_pomodoro',
-} as const
+const STORAGE_PREFIX = 'kacha_'
 
-export function loadFromStorage<T>(key: string, defaultValue: T): T {
+/** 保存数据到 localStorage */
+export function saveToStorage<T>(key: string, data: T): void {
   try {
-    const data = localStorage.getItem(key)
-    return data ? JSON.parse(data) : defaultValue
-  } catch {
-    return defaultValue
-  }
-}
-
-export function saveToStorage<T>(key: string, value: T): void {
-  try {
-    localStorage.setItem(key, JSON.stringify(value))
+    localStorage.setItem(STORAGE_PREFIX + key, JSON.stringify(data))
   } catch (e) {
     console.error('Failed to save to storage:', e)
   }
 }
 
-export function exportAllData(): string {
-  const data: Record<string, unknown> = {}
-  Object.values(STORAGE_KEYS).forEach(key => {
-    const stored = localStorage.getItem(key)
-    if (stored) data[key] = JSON.parse(stored)
-  })
-  return JSON.stringify(data, null, 2)
-}
-
-export function importAllData(jsonStr: string): boolean {
+/** 从 localStorage 加载数据 */
+export function loadFromStorage<T>(key: string, fallback: T): T {
   try {
-    const data = JSON.parse(jsonStr)
-    Object.entries(data).forEach(([key, value]) => {
-      localStorage.setItem(key, JSON.stringify(value))
-    })
-    return true
+    const raw = localStorage.getItem(STORAGE_PREFIX + key)
+    if (!raw) return fallback
+    return JSON.parse(raw) as T
   } catch {
-    return false
+    return fallback
   }
 }
 
-export function clearAllData(): void {
-  Object.values(STORAGE_KEYS).forEach(key => {
-    localStorage.removeItem(key)
-  })
+/** 删除 storage 数据 */
+export function removeFromStorage(key: string): void {
+  try {
+    localStorage.removeItem(STORAGE_PREFIX + key)
+  } catch { /* noop */ }
+}
+
+/** 导出所有数据为 JSON */
+export function exportAllData(): Record<string, unknown> {
+  const result: Record<string, unknown> = {}
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i)
+    if (key?.startsWith(STORAGE_PREFIX)) {
+      try {
+        result[key.slice(STORAGE_PREFIX.length)] = JSON.parse(localStorage.getItem(key) ?? 'null')
+      } catch { /* skip */ }
+    }
+  }
+  return result
+}
+
+/** 从 JSON 导入所有数据 */
+export function importAllData(data: Record<string, unknown>): void {
+  for (const [key, value] of Object.entries(data)) {
+    saveToStorage(key, value)
+  }
 }

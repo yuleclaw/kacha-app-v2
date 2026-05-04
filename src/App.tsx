@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import HomePage from './pages/HomePage'
 import AnniversaryPage from './pages/AnniversaryPage'
 import FocusPage from './pages/FocusPage'
@@ -18,32 +18,12 @@ import ScanPage from './pages/ScanPage'
 import SettingsPage from './pages/SettingsPage'
 import StatsPage from './pages/StatsPage'
 import AddPanel from './components/AddPanel'
-
-type PageName =
-  | 'home'
-  | 'anniversary'
-  | 'focus'
-  | 'pomodoro'
-  | 'timer'
-  | 'stopwatch'
-  | 'flash'
-  | 'expiry'
-  | 'warranty'
-  | 'coupon'
-  | 'expense'
-  | 'items'
-  | 'schedule'
-  | 'travel'
-  | 'travel-detail'
-  | 'scan'
-  | 'settings'
-  | 'stats'
+import type { PageName } from './types'
 
 export default function App() {
   const [currentPage, setCurrentPage] = useState<PageName>('home')
-  const [dialogStack, setDialogStack] = useState<PageName[]>(['home'])
-  const [travelId, setTravelId] = useState<string>('')
-  const [scanMode, setScanMode] = useState<string>('auto')
+  const [travelId, setTravelId] = useState('')
+  const [scanMode, setScanMode] = useState('auto')
   const [showAddPanel, setShowAddPanel] = useState(false)
 
   const navigate = (page: PageName, opts?: { travelId?: string; scanMode?: string }) => {
@@ -53,7 +33,6 @@ export default function App() {
     setShowAddPanel(false)
   }
 
-  // Expose navigate to window for ScanPage callback
   useEffect(() => {
     (window as any).kachaNavigate = (page: string, opts?: any) => {
       navigate(page as PageName, opts)
@@ -61,22 +40,20 @@ export default function App() {
   }, [])
 
   const handleBack = () => {
-    // Go back to tab root
-    if (['pomodoro','timer','stopwatch','flash'].includes(currentPage)) navigate('focus')
-    else if (['expiry','warranty','coupon','expense'].includes(currentPage)) navigate('items')
+    if (['pomodoro', 'timer', 'stopwatch', 'flash'].includes(currentPage)) navigate('focus')
+    else if (['expiry', 'warranty', 'coupon', 'expense'].includes(currentPage)) navigate('items')
     else if (currentPage === 'travel-detail') navigate('travel')
-    else if (['scan','stats','settings','anniversary'].includes(currentPage)) navigate('home')
-    else if (['schedule'].includes(currentPage)) navigate('home')
+    else if (['scan', 'stats', 'settings', 'anniversary', 'schedule'].includes(currentPage)) navigate('home')
     else navigate('home')
   }
 
   const handleTabPress = (key: string) => {
     if (key === 'add') { setShowAddPanel(v => !v); return }
-    if (key === 'focus') setShowAddPanel(false)
+    if (key !== 'add') setShowAddPanel(false)
     navigate(key as PageName)
   }
 
-  const showTabBar = ['home','focus','items','schedule','travel'].includes(currentPage)
+  const showTabBar = ['home', 'focus', 'items', 'schedule', 'travel'].includes(currentPage)
 
   const renderPage = () => {
     switch (currentPage) {
@@ -108,7 +85,7 @@ export default function App() {
       <AddPanel
         open={showAddPanel}
         onClose={() => setShowAddPanel(false)}
-        onNavigate={(p) => navigate(p as PageName)}
+        onNavigate={(p) => navigate(p)}
         onScan={() => navigate('scan', { scanMode: 'auto' })}
       />
       {showTabBar && (
@@ -121,19 +98,19 @@ export default function App() {
 function TabBar({ currentPage, onPress }: { currentPage: string; onPress: (key: string) => void }) {
   const tabs = [
     { key: 'home', label: '首页', icon: '🏠' },
-    { key: 'focus', label: '聚焦', icon: '⏱️' },
+    { key: 'focus', label: '专注', icon: '⏱️' },
     { key: 'add', label: '', icon: '➕' },
     { key: 'items', label: '物品', icon: '📦' },
     { key: 'schedule', label: '日程', icon: '📅' },
     { key: 'travel', label: '旅行', icon: '✈️' },
   ]
 
-  const isActive = (key: string): boolean => {
+  const isActive = (key: string) => {
     if (key === 'home') return currentPage === 'home'
-    if (key === 'focus') return ['focus','pomodoro','timer','stopwatch','flash'].includes(currentPage)
-    if (key === 'items') return ['items','expiry','warranty','coupon','expense'].includes(currentPage)
+    if (key === 'focus') return ['focus', 'pomodoro', 'timer', 'stopwatch', 'flash'].includes(currentPage)
+    if (key === 'items') return ['items', 'expiry', 'warranty', 'coupon', 'expense'].includes(currentPage)
     if (key === 'schedule') return currentPage === 'schedule'
-    if (key === 'travel') return ['travel','travel-detail'].includes(currentPage)
+    if (key === 'travel') return ['travel', 'travel-detail'].includes(currentPage)
     return false
   }
 
@@ -147,17 +124,17 @@ function TabBar({ currentPage, onPress }: { currentPage: string; onPress: (key: 
         >
           {tab.key === 'add' ? (
             <div style={{
-              width: '44px', height: '44px', borderRadius: '50%',
+              width: 44, height: 44, borderRadius: '50%',
               background: 'var(--color-primary)', color: 'white',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: '24px', marginBottom: '2px',
+              fontSize: 24, marginBottom: 2,
             }}>
               {tab.icon}
             </div>
           ) : (
             <>
               <span className="tab-icon">{tab.icon}</span>
-              <span style={{ fontSize: '10px' }}>{tab.label}</span>
+              <span style={{ fontSize: 10 }}>{tab.label}</span>
             </>
           )}
         </div>

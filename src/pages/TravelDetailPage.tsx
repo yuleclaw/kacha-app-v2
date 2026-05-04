@@ -1,194 +1,200 @@
-import React, { useState, useEffect } from 'react'
-import { useTravelStore } from '@/store/useTravelStore'
-import { Activity } from '@/types'
-import { formatDate, generateId } from '@/utils/date'
-import PageHeader from '@/components/PageHeader'
-import Modal from '@/components/Modal'
-import ConfirmDialog from '@/components/ConfirmDialog'
+import { useState } from 'react'
+import PageHeader from '../components/PageHeader'
+import ConfirmDialog from '../components/ConfirmDialog'
+import Modal from '../components/Modal'
+import { useTravelStore } from '../store/useTravelStore'
+import { formatDate } from '../utils/date'
+import { ACTIVITY_TYPE_LABELS } from '../types'
+import type { Travel, TravelDay, Activity } from '../types'
+
+function generateId(): string { return Date.now().toString(36) + Math.random().toString(36).slice(2, 6) }
 
 interface TravelDetailPageProps {
   travelId: string
   onBack: () => void
 }
 
-const ACTIVITY_TYPES = ['transport', 'sightseeing', 'food', 'hotel', 'shopping', 'other'] as const
-const TYPE_ICONS: Record<string, string> = { transport: '🚗', sightseeing: '🏛️', food: '🍜', hotel: '🏨', shopping: '🛍️', other: '📌' }
-
 export default function TravelDetailPage({ travelId, onBack }: TravelDetailPageProps) {
-  const { items, update, addDay, addActivity, removeActivity } = useTravelStore()
-  const [travel, setTravel] = useState(items.find(t => t.id === travelId))
-  const [showActivityModal, setShowActivityModal] = useState(false)
-  const [showPasteModal, setShowPasteModal] = useState(false)
-  const [editingActivity, setEditingActivity] = useState<{ dayIdx: number; act: Activity } | null>(null)
-
-  const [time, setTime] = useState('09:00')
-  const [type, setType] = useState<Activity['type']>('sightseeing')
-  const [title, setTitle] = useState('')
-  const [location, setLocation] = useState('')
-  const [description, setDescription] = useState('')
-  const [selectedDayIdx, setSelectedDayIdx] = useState(0)
+  const store = useTravelStore()
+  const travel = store.items.find((t) => t.id === travelId)
+  const [showAddActivity, setShowAddActivity] = useState(false)
+  const [editingActivity, setEditingActivity] = useState<{ dayId: string; activity: Activity } | null>(null)
+  const [deleteActivity, setDeleteActivity] = useState<{ dayId: string; activityId: string } | null>(null)
+  const [showPaste, setShowPaste] = useState(false)
   const [pasteText, setPasteText] = useState('')
+  const [activeDay, setActiveDay] = useState(0)
+  const [form, setForm] = useState({ time: '', type: 'sightseeing' as string, title: '', description: '', location: '' })
 
-  useEffect(() => { setTravel(items.find(t => t.id === travelId)) }, [items, travelId])
+  if (!travel) {
+    return <div className="page"><PageHeader title="行程详情" onBack={onBack} /><div className="empty-state"><p>行程不存在</p></div></div>
+  }
 
-  // If travel not found, go back
-  if (!travel) { onBack(); return null }
+  const sortedDays = [...travel.days].sort((a, b) => a.date.localeCompare(b.date))
+  const currentDay = sortedDays[activeDay]
+
+  const addDayIfNeeded = () => {
+    const start = new Date(travel.startDate)
+    const end = new Date(travel.endDate)
+    const existingDates = travel.days.map((d) => d.date)
+    for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+      const dateStr = d.toISOString().slice(0, 10)
+      if (!existingDates.includes(dateStr)) {
+        store.addDay(travelId, { id: generateId(), date: dateStr, activities: [] })
+      }
+    }
+  }
+
+  const openAddActivity = (dayId: string) => {
+    setEditingActivity(null)
+    setForm({ time: '', type: 'sightseeing', title: '', description: '', location: '' })
+    setShowAddActivity(true)
+  }
+
+  const openEditActivity = (dayId: string, activity: Activity) => {
+    setEditingActivity({ dayId, activity })
+    setForm({ time: activity.time, type: activity.type, title: activity.title, description: activity.description, location: activity.location })
+    setShowAddActivity(true)
+  }
 
   const handleSaveActivity = () => {
-    if (!title.trim()) return
-    const activity: Activity = { id: editingActivity?.act.id || generateId(), time, type, title: title.trim(), description, location }
-    if (editingActivity) {
-      const newDays = [...travel.days]
-      const day = { ...newDays[editingActivity.dayIdx] }
-      day.activities = day.activities.map(a => a.id === editingActivity.act.id ? activity : a).sort((a, b) => a.time.localeCompare(b.time))
-      newDays[editingActivity.dayIdx] = day
-      update(travel.id, { days: newDays })
-    } else {
-      addActivity(travel.id, travel.days[selectedDayIdx].id, activity)
+    if (!form.title) return
+    const data: Activity = {
+      id: editingActivity?.activity.id ?? generateId(),
+      time: form.time,
+      type: form.type as Activity['type'],
+      title: form.title,
+      description: form.description,
+      location: form.location,
     }
-    setShowActivityModal(false)
-    setTravel(items.find(t => t.id === travelId))
+    if (editingActivity) {
+      store.updateActivity(travelId, editingActivity.dayId, data.id, data)
+    } else {
+      const dayId = travel.days[activeDay]?.id ?? ''
+      if (dayId) store.addActivity(travelId, dayId, data)
+    }
+    setShowAddActivity(false)
   }
 
-  const openAddActivity = (dayIdx: number) => {
-    setSelectedDayIdx(dayIdx); setEditingActivity(null)
-    setTime('09:00'); setType('sightseeing'); setTitle(''); setLocation(''); setDescription('')
-    setShowActivityModal(true)
-  }
-
-  const openEditActivity = (dayIdx: number, act: Activity) => {
-    setSelectedDayIdx(dayIdx); setEditingActivity({ dayIdx, act })
-    setTime(act.time); setType(act.type); setTitle(act.title); setLocation(act.location); setDescription(act.description)
-    setShowActivityModal(true)
-  }
-
-  const handlePasteParse = () => {
-    // Simple paste parser - look for date patterns
-    alert('粘贴识别功能：请将行程单粘贴到输入框，AI将自动识别并填充。\n\n当前版本建议手动添加行程。')
-    setShowPasteModal(false)
+  const handlePaste = () => {
+    // Simple parse: lines with time -> activity
+    const lines = pasteText.split('\n').filter((l) => l.trim())
+    const dayId = travel.days[activeDay]?.id ?? ''
+    lines.forEach((line) => {
+      const match = line.match(/(\d{1,2}:\d{2})\s+(.+)/)
+      if (match) {
+        store.addActivity(travelId, dayId, {
+          id: generateId(),
+          time: match[1] ?? '',
+          type: 'sightseeing',
+          title: match[2]?.trim() ?? '',
+          description: '',
+          location: '',
+        })
+      }
+    })
+    setShowPaste(false)
+    setPasteText('')
   }
 
   return (
-    <div className="app-container">
-      <PageHeader
-        title={travel.name}
-        onBack={onBack}
-        rightAction={
-          <button className="btn btn-secondary btn-sm" onClick={() => setShowPasteModal(true)}>📋 粘贴识别</button>
-        }
-      />
+    <>
+      <PageHeader title={travel.name} onBack={onBack} right={
+        <button className="btn btn-sm btn-ghost" onClick={() => { addDayIfNeeded(); setShowPaste(true) }}>📋 粘贴</button>
+      } />
 
       <div className="page">
-        {/* Trip info */}
-        <div className="card">
-          <div className="flex items-center gap-sm mb-sm">
-            <span style={{ fontSize: 'var(--font-sm)', color: 'var(--color-text-secondary)' }}>
-              {formatDate(travel.startDate)} ~ {formatDate(travel.endDate)}
+        {/* Day tabs */}
+        <div style={{ display: 'flex', gap: 6, marginBottom: 12, overflowX: 'auto' }}>
+          {sortedDays.map((day, i) => (
+            <span key={day.id} className={`tag ${activeDay === i ? 'tag-primary' : ''}`}
+              style={{ cursor: 'pointer', whiteSpace: 'nowrap' }}
+              onClick={() => setActiveDay(i)}>
+              Day{i + 1} {day.date.slice(5)}
             </span>
-            <span className="tag tag-info">{travel.days.length}天</span>
-          </div>
-          {travel.companions.length > 0 && (
-            <div style={{ fontSize: 'var(--font-sm)', color: 'var(--color-text-secondary)' }}>
-              同行人：{travel.companions.join('、')}
-            </div>
-          )}
+          ))}
+          <span className="tag" style={{ cursor: 'pointer', border: '1px dashed var(--color-border)' }}
+            onClick={() => { const ds = new Date(); const dateStr = ds.toISOString().slice(0, 10); store.addDay(travelId, { id: generateId(), date: dateStr, activities: [] }) }}>
+            ＋ 添加天
+          </span>
         </div>
 
-        {/* Day tabs */}
-        {travel.days.map((day, idx) => (
-          <div key={day.id} style={{ marginBottom: 'var(--spacing-md)' }}>
-            <div className="section-title">
-              <span className="section-title-text">
-                Day {idx + 1} · {day.date}
-                {day.activities.length > 0 && <span style={{ fontSize: 'var(--font-xs)', color: 'var(--color-text-tertiary)', marginLeft: '8px' }}>{day.activities.length}个活动</span>}
-              </span>
-              <button className="btn btn-primary btn-sm" onClick={() => openAddActivity(idx)}>+ 添加</button>
+        {currentDay ? (
+          <>
+            <div className="flex-between mb-sm">
+              <span className="text-sm text-secondary">{formatDate(currentDay.date)}</span>
+              <button className="btn btn-sm btn-primary" onClick={() => openAddActivity(currentDay.id)}>＋ 活动</button>
             </div>
 
-            {day.activities.length === 0 ? (
-              <div style={{ textAlign: 'center', color: 'var(--color-text-tertiary)', fontSize: 'var(--font-sm)', padding: 'var(--spacing-lg)' }}>
-                暂无活动，点击添加
-              </div>
+            {currentDay.activities.length === 0 ? (
+              <div className="empty-state"><div className="icon">🗓️</div><p>暂无活动</p></div>
             ) : (
-              day.activities.map(act => (
-                <div key={act.id} className="list-item" onClick={() => openEditActivity(idx, act)} style={{ cursor: 'pointer' }}>
-                  <div className="list-item-icon" style={{ background: 'var(--color-travel)18', fontSize: '16px' }}>
-                    {TYPE_ICONS[act.type] || '📌'}
-                  </div>
-                  <div className="list-item-content">
-                    <div className="flex items-center gap-sm">
-                      <span style={{ fontSize: 'var(--font-xs)', color: 'var(--color-text-tertiary)', width: '40px', flexShrink: 0 }}>{act.time}</span>
-                      <span className="list-item-title">{act.title}</span>
+              [...currentDay.activities].sort((a, b) => a.time.localeCompare(b.time)).map((act) => (
+                <div key={act.id} className="card" style={{ cursor: 'pointer', padding: '12px 16px' }}
+                  onClick={() => openEditActivity(currentDay.id, act)}>
+                  <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+                    <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--color-primary)', minWidth: 48 }}>{act.time}</div>
+                    <div style={{ flex: 1 }}>
+                      <div className="flex-between">
+                        <span className="card-title">{act.title}</span>
+                        <span className="tag tag-primary">{ACTIVITY_TYPE_LABELS[act.type] ?? act.type}</span>
+                      </div>
+                      {act.location && <div className="card-subtitle" style={{ marginTop: 2 }}>📍 {act.location}</div>}
+                      {act.description && <div style={{ fontSize: 12, color: 'var(--color-text-tertiary)', marginTop: 2 }}>{act.description}</div>}
                     </div>
-                    {act.location && <div className="list-item-subtitle">📍 {act.location}</div>}
                   </div>
-                  <button
-                    className="header-btn"
-                    onClick={e => { e.stopPropagation(); removeActivity(travel.id, day.id, act.id) }}
-                  >
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-danger)" strokeWidth="2">
-                      <path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m3 0v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6h14" />
-                    </svg>
-                  </button>
                 </div>
               ))
             )}
-          </div>
-        ))}
+          </>
+        ) : (
+          <div className="empty-state"><p>点击"添加天"创建日程</p></div>
+        )}
       </div>
 
       {/* Add/Edit Activity Modal */}
-      <Modal open={showActivityModal} onClose={() => setShowActivityModal(false)} title={editingActivity ? '编辑活动' : '添加活动'}>
-        <div className="form-row">
-          <div className="form-group">
-            <label className="form-label">时间</label>
-            <input className="form-input" type="time" value={time} onChange={e => setTime(e.target.value)} />
-          </div>
-          <div className="form-group">
-            <label className="form-label">类型</label>
-            <select className="form-select" value={type} onChange={e => setType(e.target.value as Activity['type'])}>
-              {ACTIVITY_TYPES.map(t => <option key={t} value={t}>{TYPE_ICONS[t]} {t === 'transport' ? '交通' : t === 'sightseeing' ? '景点' : t === 'food' ? '美食' : t === 'hotel' ? '住宿' : t === 'shopping' ? '购物' : '其他'}</option>)}
-            </select>
-          </div>
+      <Modal open={showAddActivity} title={editingActivity ? '编辑活动' : '添加活动'} onClose={() => setShowAddActivity(false)}>
+        <div className="form-group">
+          <label className="form-label">时间</label>
+          <input className="form-input" type="time" value={form.time} onChange={(e) => setForm({ ...form, time: e.target.value })} />
+        </div>
+        <div className="form-group">
+          <label className="form-label">类型</label>
+          <select className="form-select" value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value })}>
+            {Object.entries(ACTIVITY_TYPE_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+          </select>
         </div>
         <div className="form-group">
           <label className="form-label">标题</label>
-          <input className="form-input" value={title} onChange={e => setTitle(e.target.value)} placeholder="活动标题" />
+          <input className="form-input" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
         </div>
         <div className="form-group">
           <label className="form-label">地点</label>
-          <input className="form-input" value={location} onChange={e => setLocation(e.target.value)} placeholder="地点（可选）" />
+          <input className="form-input" value={form.location} onChange={(e) => setForm({ ...form, location: e.target.value })} />
         </div>
         <div className="form-group">
           <label className="form-label">描述</label>
-          <textarea className="form-input" value={description} onChange={e => setDescription(e.target.value)} placeholder="描述（可选）" rows={2} />
+          <textarea className="form-textarea" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
         </div>
-        <div style={{ padding: 'var(--spacing-lg) 0' }}>
-          <button className="btn btn-primary" style={{ width: '100%' }} onClick={handleSaveActivity}>
-            {editingActivity ? '保存' : '添加'}
-          </button>
-        </div>
+        <button className="btn btn-primary" style={{ width: '100%' }} onClick={handleSaveActivity}>
+          {editingActivity ? '保存' : '添加'}
+        </button>
       </Modal>
 
-      {/* Paste Parse Modal */}
-      <Modal open={showPasteModal} onClose={() => setShowPasteModal(false)} title="粘贴识别行程">
+      {/* Paste Modal */}
+      <Modal open={showPaste} title="粘贴行程" onClose={() => setShowPaste(false)}>
         <div className="form-group">
-          <label className="form-label">粘贴行程单内容</label>
-          <textarea
-            className="form-input"
-            value={pasteText}
-            onChange={e => setPasteText(e.target.value)}
-            placeholder="粘贴行程单文本，系统将自动识别日期、活动、地点..."
-            rows={6}
-          />
+          <label className="form-label">粘贴行程单（每行：时间 活动描述）</label>
+          <textarea className="form-textarea" rows={6} value={pasteText} onChange={(e) => setPasteText(e.target.value)}
+            placeholder="09:00 抵达大阪关西机场&#10;11:00 心斋桥购物&#10;14:00 道顿堀美食" />
         </div>
-        <div style={{ fontSize: 'var(--font-xs)', color: 'var(--color-text-tertiary)', marginBottom: 'var(--spacing-md)' }}>
-          提示：简单粘贴将提示手动添加。完整版将支持自动解析携程、飞猪等行程单格式。
-        </div>
-        <div style={{ padding: 'var(--spacing-lg) 0' }}>
-          <button className="btn btn-primary" style={{ width: '100%' }} onClick={handlePasteParse}>解析并填充</button>
-        </div>
+        <button className="btn btn-primary" style={{ width: '100%' }} onClick={handlePaste}>
+          解析并添加
+        </button>
       </Modal>
-    </div>
+
+      <ConfirmDialog open={deleteActivity !== null} title="删除活动" message="确定删除？" danger
+        onConfirm={() => { if (deleteActivity) { store.removeActivity(travelId, deleteActivity.dayId, deleteActivity.activityId); setDeleteActivity(null) } }}
+        onCancel={() => setDeleteActivity(null)} />
+    </>
   )
 }

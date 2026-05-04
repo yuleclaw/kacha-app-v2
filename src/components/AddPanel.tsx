@@ -1,70 +1,45 @@
-import React, { useState, useRef, useCallback } from 'react'
-import { useAnniversaryStore } from '@/store/useAnniversaryStore'
-import { useExpiryStore } from '@/store/useExpiryStore'
-import { useWarrantyStore } from '@/store/useWarrantyStore'
-import { useCouponStore } from '@/store/useCouponStore'
-import { useFlashStore } from '@/store/useFlashStore'
-import { useScheduleStore } from '@/store/useScheduleStore'
-import { useTravelStore } from '@/store/useTravelStore'
-import { useExpenseStore } from '@/store/useExpenseStore'
-import { UniversalAddType } from '@/types'
+import type { PageName, UniversalAddType } from '../types'
 
 interface AddPanelProps {
   open: boolean
   onClose: () => void
-  onNavigate: (type: string, mode?: string) => void
+  onNavigate: (page: PageName) => void
   onScan: () => void
 }
 
-const ADD_ITEMS: { type: UniversalAddType | 'scan' | 'paste'; icon: string; label: string; color: string; bgColor: string }[] = [
-  { type: 'scan', icon: '📸', label: '拍照识别', color: '#007AFF', bgColor: '#E5F1FF' },
-  { type: 'paste', icon: '📋', label: '粘贴识别', color: '#5856D6', bgColor: '#EEEDFE' },
-  { type: 'anniversary', icon: '💜', label: '纪念日', color: '#FF2D55', bgColor: '#FBEAF0' },
-  { type: 'expiry', icon: '📦', label: '保质期', color: '#FF9500', bgColor: '#FFF3E0' },
-  { type: 'warranty', icon: '🔧', label: '保修期', color: '#007AFF', bgColor: '#E5F1FF' },
-  { type: 'coupon', icon: '🎫', label: '优惠券', color: '#5856D6', bgColor: '#EEEDFE' },
-  { type: 'flash', icon: '⚡', label: '秒杀', color: '#FF3B30', bgColor: '#FFEBEA' },
-  { type: 'schedule', icon: '📅', label: '日程', color: '#34C759', bgColor: '#E8F8ED' },
-  { type: 'travel', icon: '✈️', label: '旅行', color: '#00C7BE', bgColor: '#E0F7F5' },
-  { type: 'expense', icon: '💰', label: '报销', color: '#FF9500', bgColor: '#FFF3E0' },
-]
+interface AddItem {
+  label: string
+  icon: string
+  action: () => void
+}
 
 export default function AddPanel({ open, onClose, onNavigate, onScan }: AddPanelProps) {
   if (!open) return null
 
-  const handleItemClick = (type: string) => {
-    onClose()
-    if (type === 'scan') {
-      onScan()
-    } else if (type === 'paste') {
-      const text = window.prompt('粘贴内容:')
-      if (text) {
-        onNavigate('scan', 'paste')
-      }
-    } else {
-      onNavigate(type, 'add')
-    }
-  }
+  const items: AddItem[] = [
+    { label: '拍照识别', icon: '📷', action: onScan },
+    { label: '纪念日', icon: '💜', action: () => { onNavigate('anniversary'); onClose() } },
+    { label: '保质期', icon: '📦', action: () => { onNavigate('expiry'); onClose() } },
+    { label: '保修期', icon: '🔧', action: () => { onNavigate('warranty'); onClose() } },
+    { label: '优惠券', icon: '🎫', action: () => { onNavigate('coupon'); onClose() } },
+    { label: '秒杀', icon: '⚡', action: () => { onNavigate('flash'); onClose() } },
+    { label: '日程', icon: '📅', action: () => { onNavigate('schedule'); onClose() } },
+    { label: '旅行', icon: '✈️', action: () => { onNavigate('travel'); onClose() } },
+    { label: '报销', icon: '💰', action: () => { onNavigate('expense'); onClose() } },
+  ]
 
   return (
     <>
       <div className="add-panel-overlay" onClick={onClose} />
       <div className="add-panel">
-        {ADD_ITEMS.map(item => (
-          <div
-            key={item.type}
-            className="add-panel-item"
-            onClick={() => handleItemClick(item.type)}
-          >
-            <div
-              className="add-panel-icon"
-              style={{ background: item.bgColor, fontSize: '18px' }}
-            >
-              {item.icon}
-            </div>
-            <span style={{ fontSize: 'var(--font-md)' }}>{item.label}</span>
-          </div>
-        ))}
+        <div className="add-panel-grid">
+          {items.map((item) => (
+            <button key={item.label} className="add-panel-item" onClick={item.action}>
+              <span className="icon">{item.icon}</span>
+              <span>{item.label}</span>
+            </button>
+          ))}
+        </div>
       </div>
     </>
   )

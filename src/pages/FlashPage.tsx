@@ -1,203 +1,151 @@
-import React, { useState, useEffect } from 'react'
-import { useFlashStore } from '@/store/useFlashStore'
-import { FlashSale, PLATFORM_LABELS } from '@/types'
-import { formatFlashCountdown, formatDateTime, generateId } from '@/utils/date'
-import PageHeader from '@/components/PageHeader'
-import Modal from '@/components/Modal'
-import Toggle from '@/components/Toggle'
-import ConfirmDialog from '@/components/ConfirmDialog'
+import { useState } from 'react'
+import PageHeader from '../components/PageHeader'
+import ConfirmDialog from '../components/ConfirmDialog'
+import Modal from '../components/Modal'
+import Toggle from '../components/Toggle'
+import { useFlashStore } from '../store/useFlashStore'
+import { formatDateTime, getCountdownText, isFlashSoon } from '../utils/date'
+import { PLATFORM_LABELS } from '../types'
+import type { FlashSale } from '../types'
 
-interface FlashPageProps {
-  onBack: () => void
-}
+function generateId(): string { return Date.now().toString(36) + Math.random().toString(36).slice(2, 6) }
+
+interface FlashPageProps { onBack: () => void }
+
+const PLATFORMS = ['jd', 'taobao', 'pinduoduo', 'dewu'] as const
 
 export default function FlashPage({ onBack }: FlashPageProps) {
-  const { items, load, add, update, remove, toggleNotify } = useFlashStore()
-  const [showModal, setShowModal] = useState(false)
-  const [editItem, setEditItem] = useState<FlashSale | null>(null)
+  const store = useFlashStore()
+  const [showAdd, setShowAdd] = useState(false)
+  const [editing, setEditing] = useState<FlashSale | null>(null)
   const [deleteId, setDeleteId] = useState<string | null>(null)
+  const [form, setForm] = useState({ productName: '', platform: 'jd' as string, originalPrice: '', salePrice: '', startTime: '', productUrl: '', notifyEnabled: true, notifyMinutesBefore: [60, 10, 1, 0] })
 
-  const [productName, setProductName] = useState('')
-  const [platform, setPlatform] = useState<FlashSale['platform']>('jd')
-  const [originalPrice, setOriginalPrice] = useState('')
-  const [salePrice, setSalePrice] = useState('')
-  const [startTime, setStartTime] = useState('')
-  const [productUrl, setProductUrl] = useState('')
-  const [notifyEnabled, setNotifyEnabled] = useState(true)
-  const [countdown, setCountdown] = useState<Record<string, ReturnType<typeof formatFlashCountdown>>>({})
-
-  useEffect(() => { load() }, [])
-
-  // Update countdown every second
-  useEffect(() => {
-    const update = () => {
-      const map: Record<string, ReturnType<typeof formatFlashCountdown>> = {}
-      items.forEach(item => {
-        map[item.id] = formatFlashCountdown(item.startTime)
-      })
-      setCountdown(map)
-    }
-    update()
-    const interval = setInterval(update, 1000)
-    return () => clearInterval(interval)
-  }, [items])
-
-  const sortedItems = [...items].sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime())
+  const sorted = [...store.items].sort((a, b) => a.startTime.localeCompare(b.startTime))
 
   const openAdd = () => {
-    setEditItem(null)
-    setProductName(''); setPlatform('jd'); setOriginalPrice('')
-    setSalePrice(''); setStartTime(''); setProductUrl('')
-    setNotifyEnabled(true); setShowModal(true)
+    setEditing(null)
+    setForm({ productName: '', platform: 'jd', originalPrice: '', salePrice: '', startTime: '', productUrl: '', notifyEnabled: true, notifyMinutesBefore: [60, 10, 1, 0] })
+    setShowAdd(true)
   }
 
   const openEdit = (item: FlashSale) => {
-    setEditItem(item)
-    setProductName(item.productName); setPlatform(item.platform)
-    setOriginalPrice(item.originalPrice); setSalePrice(item.salePrice)
-    setStartTime(item.startTime); setProductUrl(item.productUrl)
-    setNotifyEnabled(item.notifyEnabled); setShowModal(true)
+    setEditing(item)
+    setForm({ productName: item.productName, platform: item.platform, originalPrice: item.originalPrice, salePrice: item.salePrice, startTime: item.startTime, productUrl: item.productUrl, notifyEnabled: item.notifyEnabled, notifyMinutesBefore: item.notifyMinutesBefore })
+    setShowAdd(true)
   }
 
   const handleSave = () => {
-    if (!productName.trim() || !salePrice || !startTime) return
-    const data = { productName: productName.trim(), platform, originalPrice, salePrice, startTime, productUrl, notifyEnabled, notifyMinutesBefore: [60, 10, 1, 0] }
-    if (editItem) {
-      update(editItem.id, data)
-    } else {
-      add(data)
+    if (!form.productName || !form.startTime) return
+    const data: FlashSale = {
+      id: editing?.id ?? generateId(),
+      productName: form.productName,
+      platform: form.platform as FlashSale['platform'],
+      originalPrice: form.originalPrice,
+      salePrice: form.salePrice,
+      startTime: form.startTime,
+      productUrl: form.productUrl,
+      notifyEnabled: form.notifyEnabled,
+      notifyMinutesBefore: form.notifyMinutesBefore,
     }
-    setShowModal(false)
+    if (editing) store.update(data.id, data)
+    else store.add(data)
+    setShowAdd(false)
   }
 
-  const handleDelete = () => {
-    if (deleteId) { remove(deleteId); setDeleteId(null) }
-  }
-
-  const copyLink = async (url: string) => {
-    try {
-      await navigator.clipboard.writeText(url)
-      alert('链接已复制')
-    } catch {
-      window.prompt('复制链接:', url)
-    }
+  const toggleNotifyMinute = (minute: number) => {
+    setForm((f) => ({
+      ...f,
+      notifyMinutesBefore: f.notifyMinutesBefore.includes(minute)
+        ? f.notifyMinutesBefore.filter((m) => m !== minute)
+        : [...f.notifyMinutesBefore, minute].sort((a, b) => b - a),
+    }))
   }
 
   return (
-    <div className="app-container">
-      <PageHeader
-        title="秒杀管理"
-        onBack={onBack}
-        rightAction={<button className="btn btn-primary btn-sm" onClick={openAdd}>+ 添加</button>}
-      />
+    <>
+      <PageHeader title="⚡ 秒杀管理" onBack={onBack} right={
+        <button className="btn btn-primary btn-sm" onClick={openAdd}>＋ 添加</button>
+      } />
+
       <div className="page">
-        {sortedItems.length === 0 ? (
-          <div className="empty-state">
-            <div className="empty-state-icon">⚡</div>
-            <div className="empty-state-text">暂无秒杀活动</div>
-          </div>
-        ) : (
-          sortedItems.map(item => {
-            const cd = countdown[item.id]
-            return (
-              <div key={item.id} className="card" onClick={() => openEdit(item)} style={{ cursor: 'pointer' }}>
-                <div className="flex items-center justify-between mb-sm">
-                  <span className="tag tag-danger">{PLATFORM_LABELS[item.platform]}</span>
-                  <span style={{ fontSize: 'var(--font-xs)', color: 'var(--color-text-tertiary)' }}>
-                    {formatDateTime(item.startTime)}
-                  </span>
+        {sorted.length === 0 ? (
+          <div className="empty-state"><div className="icon">⚡</div><p>暂无秒杀活动</p></div>
+        ) : sorted.map((item) => (
+          <div key={item.id} className="card" style={{ cursor: 'pointer' }} onClick={() => openEdit(item)}>
+            <div className="flex-between">
+              <div>
+                <div className="card-title">{item.productName}</div>
+                <div className="card-subtitle" style={{ marginTop: 2 }}>
+                  <span className="tag tag-primary">{PLATFORM_LABELS[item.platform] ?? item.platform}</span>
+                  {item.originalPrice && <span style={{ textDecoration: 'line-through', marginLeft: 6, color: 'var(--color-text-tertiary)' }}>¥{item.originalPrice}</span>}
+                  {item.salePrice && <span style={{ color: 'var(--color-danger)', fontWeight: 500, marginLeft: 6 }}>¥{item.salePrice}</span>}
                 </div>
-                <div style={{ fontWeight: 600, fontSize: 'var(--font-md)' }} className="truncate">{item.productName}</div>
-                <div className="flex items-center gap-sm mt-sm">
-                  <span className="text-secondary" style={{ fontSize: 'var(--font-sm)' }}>¥{item.originalPrice}</span>
-                  <span className="text-danger" style={{ fontWeight: 700, fontSize: 'var(--font-lg)' }}>¥{item.salePrice}</span>
+                <div style={{ fontSize: 11, color: 'var(--color-text-tertiary)', marginTop: 4 }}>
+                  {formatDateTime(item.startTime)}
                 </div>
-                {cd && (
-                  <div className="flex items-center gap-md mt-md">
-                    <div style={{ display: 'flex', gap: '4px' }}>
-                      {cd.days > 0 && (
-                        <div style={{ textAlign: 'center' }}>
-                          <div style={{ background: 'var(--color-danger)', color: 'white', borderRadius: 'var(--radius-sm)', padding: '4px 8px', fontSize: 'var(--font-lg)', fontWeight: 700 }}>
-                            {String(cd.days).padStart(2, '0')}
-                          </div>
-                          <div style={{ fontSize: '10px', color: 'var(--color-text-tertiary)' }}>天</div>
-                        </div>
-                      )}
-                      <div style={{ textAlign: 'center' }}>
-                        <div style={{ background: 'var(--color-danger)', color: 'white', borderRadius: 'var(--radius-sm)', padding: '4px 8px', fontSize: 'var(--font-lg)', fontWeight: 700 }}>
-                          {String(cd.hours).padStart(2, '0')}
-                        </div>
-                        <div style={{ fontSize: '10px', color: 'var(--color-text-tertiary)' }}>时</div>
-                      </div>
-                      <div style={{ textAlign: 'center' }}>
-                        <div style={{ background: 'var(--color-danger)', color: 'white', borderRadius: 'var(--radius-sm)', padding: '4px 8px', fontSize: 'var(--font-lg)', fontWeight: 700 }}>
-                          {String(cd.minutes).padStart(2, '0')}
-                        </div>
-                        <div style={{ fontSize: '10px', color: 'var(--color-text-tertiary)' }}>分</div>
-                      </div>
-                    </div>
-                    <div style={{ flex: 1 }} />
-                    {item.productUrl && (
-                      <button className="btn btn-secondary btn-sm" onClick={e => { e.stopPropagation(); copyLink(item.productUrl) }}>
-                        🔗 链接
-                      </button>
-                    )}
-                    <button className="btn btn-danger btn-sm" onClick={e => { e.stopPropagation(); setDeleteId(item.id) }}>
-                      删除
-                    </button>
-                  </div>
-                )}
               </div>
-            )
-          })
-        )}
+              <div style={{ textAlign: 'right' }}>
+                <div style={{ fontSize: 12, color: isFlashSoon(item.startTime) ? 'var(--color-danger)' : 'var(--color-text-tertiary)' }}>
+                  {getCountdownText(item.startTime)}
+                </div>
+                <button className="btn btn-sm btn-ghost" style={{ marginTop: 4 }}
+                  onClick={(e) => { e.stopPropagation(); setDeleteId(item.id) }}>删除</button>
+              </div>
+            </div>
+          </div>
+        ))}
       </div>
 
-      <Modal open={showModal} onClose={() => setShowModal(false)} title={editItem ? '编辑秒杀' : '添加秒杀'}>
+      <Modal open={showAdd} title={editing ? '编辑秒杀' : '添加秒杀'} onClose={() => setShowAdd(false)}>
         <div className="form-group">
           <label className="form-label">商品名称</label>
-          <input className="form-input" value={productName} onChange={e => setProductName(e.target.value)} placeholder="商品名称" />
+          <input className="form-input" value={form.productName} onChange={(e) => setForm({ ...form, productName: e.target.value })} />
         </div>
-        <div className="form-row">
-          <div className="form-group">
-            <label className="form-label">平台</label>
-            <select className="form-select" value={platform} onChange={e => setPlatform(e.target.value as FlashSale['platform'])}>
-              {Object.entries(PLATFORM_LABELS).filter(([k]) => ['jd', 'taobao', 'pinduoduo', 'dewu'].includes(k)).map(([k, v]) => (
-                <option key={k} value={k}>{v}</option>
-              ))}
-            </select>
-          </div>
-          <div className="form-group">
-            <label className="form-label">开始时间</label>
-            <input className="form-input" type="datetime-local" value={startTime} onChange={e => setStartTime(e.target.value)} />
-          </div>
+        <div className="form-group">
+          <label className="form-label">平台</label>
+          <select className="form-select" value={form.platform} onChange={(e) => setForm({ ...form, platform: e.target.value })}>
+            {PLATFORMS.map((p) => <option key={p} value={p}>{PLATFORM_LABELS[p]}</option>)}
+          </select>
         </div>
-        <div className="form-row">
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
           <div className="form-group">
             <label className="form-label">原价</label>
-            <input className="form-input" type="number" value={originalPrice} onChange={e => setOriginalPrice(e.target.value)} placeholder="原价" />
+            <input className="form-input" value={form.originalPrice} onChange={(e) => setForm({ ...form, originalPrice: e.target.value })} />
           </div>
           <div className="form-group">
             <label className="form-label">秒杀价</label>
-            <input className="form-input" type="number" value={salePrice} onChange={e => setSalePrice(e.target.value)} placeholder="秒杀价" />
+            <input className="form-input" value={form.salePrice} onChange={(e) => setForm({ ...form, salePrice: e.target.value })} />
           </div>
         </div>
         <div className="form-group">
+          <label className="form-label">开始时间</label>
+          <input className="form-input" type="datetime-local" value={form.startTime} onChange={(e) => setForm({ ...form, startTime: e.target.value })} />
+        </div>
+        <div className="form-group">
           <label className="form-label">商品链接</label>
-          <input className="form-input" value={productUrl} onChange={e => setProductUrl(e.target.value)} placeholder="商品链接（可选）" />
+          <input className="form-input" value={form.productUrl} onChange={(e) => setForm({ ...form, productUrl: e.target.value })} />
         </div>
-        <div className="flex items-center gap-sm" style={{ padding: 'var(--spacing-sm) 0' }}>
-          <Toggle active={notifyEnabled} onChange={setNotifyEnabled} />
-          <span style={{ fontSize: 'var(--font-sm)' }}>开启提醒（60/10/1/0分钟）</span>
+        <div className="form-group">
+          <label className="form-label">提醒时间</label>
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+            {[60, 10, 1, 0].map((m) => (
+              <span key={m} className={`tag ${form.notifyMinutesBefore.includes(m) ? 'tag-primary' : ''}`}
+                style={{ cursor: 'pointer' }}
+                onClick={() => toggleNotifyMinute(m)}>
+                {m === 0 ? '开抢时' : `${m}分钟前`}
+              </span>
+            ))}
+          </div>
         </div>
-        <div style={{ padding: 'var(--spacing-lg) 0' }}>
-          <button className="btn btn-primary" style={{ width: '100%' }} onClick={handleSave}>
-            {editItem ? '保存' : '添加'}
-          </button>
-        </div>
+        <button className="btn btn-primary" style={{ width: '100%' }} onClick={handleSave}>
+          {editing ? '保存' : '添加'}
+        </button>
       </Modal>
 
-      <ConfirmDialog open={!!deleteId} title="删除秒杀" message="确定要删除这个秒杀活动吗？" danger onConfirm={handleDelete} onCancel={() => setDeleteId(null)} />
-    </div>
+      <ConfirmDialog open={deleteId !== null} title="删除秒杀" message="确定删除？" danger
+        onConfirm={() => { if (deleteId) store.remove(deleteId); setDeleteId(null) }}
+        onCancel={() => setDeleteId(null)} />
+    </>
   )
 }

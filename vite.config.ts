@@ -14,7 +14,7 @@ export default defineConfig({
     sourcemap: false,
   },
   server: {
-    port: 3000,
-    host: true,
+    host: '0.0.0.0',
+    port: 5173,
   },
 })

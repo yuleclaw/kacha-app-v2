@@ -4,17 +4,8 @@ import App from './App'
 import './styles/variables.css'
 import './styles/global.css'
 
-// Initialize Capacitor plugins (safe in browser)
-try {
-  const { Capacitor } = require('@capacitor/core')
-  if (Capacitor.isNativePlatform()) {
-    require('@capacitor/status-bar')
-  }
-} catch {}
-
-const root = ReactDOM.createRoot(document.getElementById('root')!)
-root.render(
+ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <App />
-  </React.StrictMode>
+  </React.StrictMode>,
 )

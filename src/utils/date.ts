@@ -1,88 +1,139 @@
-import { differenceInDays, differenceInHours, differenceInMinutes, differenceInSeconds, format, isBefore, isAfter, parseISO, startOfDay } from 'date-fns'
+import { Solar, Lunar as LunarCalendar } from 'lunar-javascript'
+import {
+  format, differenceInDays, differenceInMinutes,
+  isToday, isPast, parseISO, addDays, startOfDay,
+} from 'date-fns'
 import { zhCN } from 'date-fns/locale'
 
-export function formatCountdown(targetDate: string): string {
-  const now = new Date()
-  const target = parseISO(targetDate)
-  const days = differenceInDays(target, now)
+/** 格式化显示日期 */
+export function formatDate(dateStr: string): string {
+  try {
+    return format(parseISO(dateStr), 'yyyy-MM-dd')
+  } catch { return dateStr }
+}
 
-  if (days > 0) return `${days}天`
+/** 格式化显示时间 */
+export function formatTime(dateStr: string): string {
+  try {
+    return format(parseISO(dateStr), 'HH:mm')
+  } catch { return dateStr }
+}
+
+/** 格式化显示日期时间 */
+export function formatDateTime(dateStr: string): string {
+  try {
+    return format(parseISO(dateStr), 'yyyy-MM-dd HH:mm')
+  } catch { return dateStr }
+}
+
+/** 获取距离今天的天数（正=未来，负=已过） */
+export function daysFromToday(dateStr: string): number {
+  try {
+    const target = startOfDay(parseISO(dateStr))
+    const today = startOfDay(new Date())
+    return differenceInDays(target, today)
+  } catch { return 0 }
+}
+
+/** 是否即将过期（N天内） */
+export function isExpiringSoon(dateStr: string, days: number): boolean {
+  const d = daysFromToday(dateStr)
+  return d >= 0 && d <= days
+}
+
+/** 是否已过期 */
+export function isExpired(dateStr: string): boolean {
+  const d = daysFromToday(dateStr)
+  return d < 0
+}
+
+/** 是否今天 */
+export function isTodayDate(dateStr: string): boolean {
+  try { return isToday(parseISO(dateStr)) }
+  catch { return false }
+}
+
+/** 获取农历日期中文描述 */
+export function getLunarDate(dateStr: string): string {
+  try {
+    const d = parseISO(dateStr)
+    const solar = Solar.fromDate(d)
+    const lunar = solar.getLunar()
+    return `${lunar.getYearInChinese()}年${lunar.getMonthInChinese()}月${lunar.getDayInChinese()}`
+  } catch {
+    return ''
+  }
+}
+
+/** 获取农历月日（如"腊月廿三"） */
+export function getLunarMonthDay(dateStr: string): string {
+  try {
+    const d = parseISO(dateStr)
+    const solar = Solar.fromDate(d)
+    const lunar = solar.getLunar()
+    return `${lunar.getMonthInChinese()}月${lunar.getDayInChinese()}`
+  } catch {
+    return ''
+  }
+}
+
+/** 获取下一年的农历同一天 */
+export function getNextLunarDate(dateStr: string): string {
+  try {
+    const d = parseISO(dateStr)
+    const solar = Solar.fromDate(d)
+    const lunar = solar.getLunar()
+    const nextLunar = LunarCalendar.fromYmd(lunar.getYear() + 1, lunar.getMonth(), lunar.getDay())
+    const nextSolar = nextLunar.getSolar()
+    return `${nextSolar.getYear()}-${String(nextSolar.getMonth()).padStart(2, '0')}-${String(nextSolar.getDay()).padStart(2, '0')}`
+  } catch {
+    return dateStr
+  }
+}
+
+/** 获取下一次日期（农历或公历） */
+export function getNextOccurrence(dateStr: string, lunar: boolean): string {
+  if (!lunar) {
+    const d = parseISO(dateStr)
+    const thisYear = format(d, 'MM-dd')
+    const now = new Date()
+    const thisYearDate = parseISO(`${now.getFullYear()}-${thisYear}`)
+    if (isPast(thisYearDate) && !isToday(thisYearDate)) {
+      return `${now.getFullYear() + 1}-${thisYear}`
+    }
+    return `${now.getFullYear()}-${thisYear}`
+  }
+  return getNextLunarDate(dateStr)
+}
+
+/** 格式化倒计时文字 */
+export function formatCountdown(minutes: number): string {
+  if (minutes <= 0) return '已开始'
+  const h = Math.floor(minutes / 60)
+  const m = minutes % 60
+  if (h > 0) return `${h}小时${m}分`
+  return `${m}分钟`
+}
+
+/** 判断闪购是否即将开始 */
+export function isFlashSoon(startTime: string): boolean {
+  try {
+    const diff = differenceInMinutes(parseISO(startTime), new Date())
+    return diff > 0 && diff <= 60
+  } catch { return false }
+}
+
+/** 计算倒计时文字 */
+export function getCountdownText(startTime: string): string {
+  try {
+    const diff = differenceInMinutes(parseISO(startTime), new Date())
+    return formatCountdown(diff)
+  } catch { return '' }
+}
+
+/** 日期间隔文字 */
+export function daysLabel(days: number): string {
   if (days === 0) return '今天'
-  return `已过${Math.abs(days)}天`
-}
-
-export function formatCountdownDetailed(targetDate: string): { days: number; hours: number; minutes: number; seconds: number; isPast: boolean } {
-  const now = new Date()
-  const target = parseISO(targetDate)
-  const isPast = isBefore(target, now)
-
-  const absDiff = Math.abs(differenceInSeconds(target, now))
-  const days = Math.floor(absDiff / 86400)
-  const hours = Math.floor((absDiff % 86400) / 3600)
-  const minutes = Math.floor((absDiff % 3600) / 60)
-  const seconds = absDiff % 60
-
-  return { days, hours, minutes, seconds, isPast }
-}
-
-export function formatFlashCountdown(startTime: string): { days: number; hours: number; minutes: number; totalMinutes: number; isStarted: boolean } {
-  const now = new Date()
-  const start = parseISO(startTime)
-  const isStarted = isAfter(now, start)
-  const totalMinutes = differenceInMinutes(start, now)
-
-  const absMinutes = Math.abs(totalMinutes)
-  const days = Math.floor(absMinutes / 1440)
-  const hours = Math.floor((absMinutes % 1440) / 60)
-  const minutes = absMinutes % 60
-
-  return { days, hours, minutes, totalMinutes, isStarted }
-}
-
-export function formatDate(date: string): string {
-  return format(parseISO(date), 'yyyy年M月d日', { locale: zhCN })
-}
-
-export function formatDateTime(date: string): string {
-  return format(parseISO(date), 'yyyy-MM-dd HH:mm', { locale: zhCN })
-}
-
-export function formatTime(date: string): string {
-  return format(parseISO(date), 'HH:mm')
-}
-
-export function isToday(date: string): boolean {
-  const target = startOfDay(parseISO(date))
-  const today = startOfDay(new Date())
-  return target.getTime() === today.getTime()
-}
-
-export function isThisWeek(date: string): boolean {
-  const now = new Date()
-  const target = parseISO(date)
-  const diff = differenceInDays(target, now)
-  return diff >= 0 && diff <= 7
-}
-
-export function isThisMonth(date: string): boolean {
-  const now = new Date()
-  const target = parseISO(date)
-  return now.getMonth() === target.getMonth() && now.getFullYear() === target.getFullYear()
-}
-
-export function daysUntil(date: string): number {
-  return differenceInDays(parseISO(date), new Date())
-}
-
-export function isExpiringSoon(date: string, daysBefore: number): boolean {
-  const diff = daysUntil(date)
-  return diff >= 0 && diff <= daysBefore
-}
-
-export function isExpired(date: string): boolean {
-  return isBefore(parseISO(date), new Date())
-}
-
-export function generateId(): string {
-  return Date.now().toString(36) + Math.random().toString(36).slice(2, 8)
+  if (days > 0) return `剩余 ${days} 天`
+  return `已过 ${Math.abs(days)} 天`
 }

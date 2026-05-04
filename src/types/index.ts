@@ -1,7 +1,9 @@
+// ===== 数据模型 =====
+
 export interface Anniversary {
   id: string
   title: string
-  date: string
+  date: string // YYYY-MM-DD
   repeatYearly: boolean
   notifyBefore: number
   notifyEnabled: boolean
@@ -132,8 +134,9 @@ export const DEFAULT_SETTINGS: AppSettings = {
   ocrServerUrl: '',
 }
 
-export type PlatformLabel = Record<string, string>
-export const PLATFORM_LABELS: PlatformLabel = {
+// ===== 标签映射 =====
+
+export const PLATFORM_LABELS: Record<string, string> = {
   jd: '京东',
   taobao: '淘宝',
   pinduoduo: '拼多多',
@@ -148,7 +151,7 @@ export const CATEGORY_LABELS: Record<string, string> = {
   love: '恋爱',
   work: '工作',
   other: '其他',
-  food: '食品',
+  food: '食物',
   cosmetic: '化妆品',
   medicine: '药品',
   electronics: '电子产品',
@@ -158,18 +161,40 @@ export const CATEGORY_LABELS: Record<string, string> = {
 export const EXPENSE_CATEGORY_LABELS: Record<string, string> = {
   food: '餐饮',
   transport: '交通',
-  hotel: '住宿',
+  hotel: '酒店',
   office: '办公',
   other: '其他',
 }
 
 export const ACTIVITY_TYPE_LABELS: Record<string, string> = {
   transport: '交通',
-  sightseeing: '景点',
+  sightseeing: '观光',
   food: '美食',
-  hotel: '住宿',
+  hotel: '酒店',
   shopping: '购物',
   other: '其他',
 }
+
+// ===== 通用类型 =====
+
+export type PageName =
+  | 'home'
+  | 'anniversary'
+  | 'focus'
+  | 'pomodoro'
+  | 'timer'
+  | 'stopwatch'
+  | 'flash'
+  | 'expiry'
+  | 'warranty'
+  | 'coupon'
+  | 'expense'
+  | 'items'
+  | 'schedule'
+  | 'travel'
+  | 'travel-detail'
+  | 'scan'
+  | 'settings'
+  | 'stats'
 
 export type UniversalAddType = 'anniversary' | 'expiry' | 'warranty' | 'coupon' | 'flash' | 'schedule' | 'travel' | 'expense'
