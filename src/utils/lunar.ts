@@ -1,4 +1,4 @@
-import { Solar } from 'lunar-javascript'
+import { Solar, Lunar } from 'lunar-javascript'
 
 export function toLunarDate(dateStr: string): { year: string; month: string; day: string; animal: string; ganZhiYear: string; festival: string } {
   const [year, month, day] = dateStr.split('-').map(Number)
@@ -6,11 +6,11 @@ export function toLunarDate(dateStr: string): { year: string; month: string; day
   const lunar = solar.getLunar()
 
   return {
-    year: `${lunar.getYearInChinese()}年`,
-    month: lunar.getMonthInChinese() + '月',
+    year: `${lunar.getYearInChinese()}Äê`,
+    month: lunar.getMonthInChinese() + 'ÔÂ',
     day: lunar.getDayInChinese(),
     animal: lunar.getYearShengXiao(),
-    ganZhiYear: `${lunar.getYearInGanZhi()}年`,
+    ganZhiYear: `${lunar.getYearInGanZhi()}Äê`,
     festival: lunar.getFestivals()?.[0] || '',
   }
 }
