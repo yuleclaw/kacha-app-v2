@@ -10,8 +10,9 @@ interface SettingsStore {
 }
 
 function validateSettings(raw: Record<string, unknown>): AppSettings {
+  const theme: AppSettings['theme'] = (raw.theme === 'light' || raw.theme === 'dark') ? raw.theme : DEFAULT_SETTINGS.theme
   return {
-    theme: (raw.theme === 'light' || raw.theme === 'dark') ? raw.theme : DEFAULT_SETTINGS.theme,
+    theme,
     pomodoroWork: typeof raw.pomodoroWork === 'number' ? raw.pomodoroWork : DEFAULT_SETTINGS.pomodoroWork,
     pomodoroBreak: typeof raw.pomodoroBreak === 'number' ? raw.pomodoroBreak : DEFAULT_SETTINGS.pomodoroBreak,
     dndEnabled: typeof raw.dndEnabled === 'boolean' ? raw.dndEnabled : DEFAULT_SETTINGS.dndEnabled,
@@ -38,7 +39,7 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
   },
 
   toggleTheme: () => {
-    const settings = { ...get().settings, theme: get().settings.theme === 'light' ? 'dark' : 'light' }
+    const settings = { ...get().settings, theme: get().settings.theme === 'light' ? 'dark' as const : 'light' as const }
     set({ settings })
     saveToStorage(STORAGE_KEYS.SETTINGS, settings)
     document.documentElement.setAttribute('data-theme', settings.theme)
