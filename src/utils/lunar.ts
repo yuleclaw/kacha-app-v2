@@ -3,31 +3,31 @@ import { Solar, Lunar } from 'lunar-javascript'
 export function toLunarDate(dateStr: string): { year: string; month: string; day: string; animal: string; ganZhiYear: string; festival: string } {
   const [year, month, day] = dateStr.split('-').map(Number)
   const solar = Solar.fromYmd(year, month, day)
-  const lunar = solar.getLunar()
+  const lunarObj = solar.getLunar()
 
   return {
-    year: `${lunar.getYearInChinese()}Äê`,
-    month: lunar.getMonthInChinese() + 'ÔÂ',
-    day: lunar.getDayInChinese(),
-    animal: lunar.getYearShengXiao(),
-    ganZhiYear: `${lunar.getYearInGanZhi()}Äê`,
-    festival: lunar.getFestivals()?.[0] || '',
+    year: `${lunarObj.getYearInChinese()}Äê`,
+    month: lunarObj.getMonthInChinese() + 'ÔÂ',
+    day: lunarObj.getDayInChinese(),
+    animal: lunarObj.getYearShengXiao(),
+    ganZhiYear: `${lunarObj.getYearInGanZhi()}Äê`,
+    festival: lunarObj.getFestivals()?.[0] || '',
   }
 }
 
 export function lunarToSolar(year: number, month: number, day: number, isLeapMonth: boolean = false): string {
-  const lunar = Lunar.fromYmd(year, month, day, isLeapMonth)
-  const solar = lunar.getSolar()
+  const lunarObj = Lunar.fromYmd(year, month, day, isLeapMonth)
+  const solar = lunarObj.getSolar()
   return `${solar.getYear()}-${String(solar.getMonth()).padStart(2, '0')}-${String(solar.getDay()).padStart(2, '0')}`
 }
 
 export function getNextLunarDate(lunarMonth: number, lunarDay: number): string {
   const today = new Date()
   const solar = Solar.fromDate(today)
-  let lunar = solar.getLunar()
+  const lunarObj = solar.getLunar()
 
-  let year = lunar.getYear()
-  if (lunar.getMonth() > lunarMonth || (lunar.getMonth() === lunarMonth && lunar.getDay() >= lunarDay)) {
+  let year = lunarObj.getYear()
+  if (lunarObj.getMonth() > lunarMonth || (lunarObj.getMonth() === lunarMonth && lunarObj.getDay() >= lunarDay)) {
     year++
   }
 
