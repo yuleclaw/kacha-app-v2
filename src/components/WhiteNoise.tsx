@@ -22,7 +22,7 @@ export default function WhiteNoise({ type, enabled }: WhiteNoiseProps) {
     }
     const audio = audioRef.current
     if (!audio) return
-    audio.src = `/sounds/${type}.mp3`
+    audio.src = `/sounds/${type}.wav`
     audio.loop = true
     audio.volume = 0.3
     audio.play().catch(() => {
@@ -42,7 +42,7 @@ export default function WhiteNoise({ type, enabled }: WhiteNoiseProps) {
 /** 播放完成音效 */
 export function playCompleteSound() {
   try {
-    const audio = new Audio('/sounds/complete.mp3')
+    const audio = new Audio('/sounds/complete.wav')
     audio.volume = 0.5
     audio.play().catch(() => {})
   } catch { /* noop */ }
