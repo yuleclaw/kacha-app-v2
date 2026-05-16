@@ -10,6 +10,8 @@ interface PomodoroStore {
   breakMinutes: number
   secondsLeft: number
   completedToday: number
+  whiteNoiseType: 'rain' | 'ocean' | 'forest' | 'cafe' | 'none'
+  whiteNoiseEnabled: boolean
   setMode: (mode: TimerMode) => void
   setStatus: (status: TimerStatus) => void
   setWorkMinutes: (m: number) => void
@@ -17,6 +19,8 @@ interface PomodoroStore {
   setSecondsLeft: (s: number) => void
   setCompletedToday: (n: number) => void
   incrementCompleted: () => void
+  setWhiteNoise: (type: 'rain' | 'ocean' | 'forest' | 'cafe' | 'none') => void
+  toggleWhiteNoise: () => void
   reset: () => void
 }
 
@@ -27,6 +31,8 @@ export const usePomodoroStore = create<PomodoroStore>()((set, get) => ({
   breakMinutes: 5,
   secondsLeft: 25 * 60,
   completedToday: 0,
+  whiteNoiseType: 'none',
+  whiteNoiseEnabled: false,
   setMode: (mode) => set({ mode }),
   setStatus: (status) => set({ status }),
   setWorkMinutes: (m) => set({ workMinutes: m, secondsLeft: m * 60 }),
@@ -34,6 +40,8 @@ export const usePomodoroStore = create<PomodoroStore>()((set, get) => ({
   setSecondsLeft: (s) => set({ secondsLeft: s }),
   setCompletedToday: (n) => set({ completedToday: n }),
   incrementCompleted: () => set((s) => ({ completedToday: s.completedToday + 1 })),
+  setWhiteNoise: (type) => set({ whiteNoiseType: type, whiteNoiseEnabled: type !== 'none' }),
+  toggleWhiteNoise: () => set((s) => ({ whiteNoiseEnabled: !s.whiteNoiseEnabled })),
   reset: () => set({
     mode: 'work',
     status: 'idle',

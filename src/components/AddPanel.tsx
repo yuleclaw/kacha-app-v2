@@ -1,4 +1,4 @@
-import type { PageName, UniversalAddType } from '../types'
+import type { PageName } from '../types'
 
 interface AddPanelProps {
   open: boolean
@@ -18,9 +18,9 @@ export default function AddPanel({ open, onClose, onNavigate, onScan }: AddPanel
 
   const items: AddItem[] = [
     { label: '拍照识别', icon: '📷', action: onScan },
+    { label: '粘贴识别', icon: '📋', action: () => { onNavigate('schedule'); onClose() } },
     { label: '纪念日', icon: '💜', action: () => { onNavigate('anniversary'); onClose() } },
-    { label: '保质期', icon: '📦', action: () => { onNavigate('expiry'); onClose() } },
-    { label: '保修期', icon: '🔧', action: () => { onNavigate('warranty'); onClose() } },
+    { label: '物品', icon: '📦', action: () => { onNavigate('expiry'); onClose() } },
     { label: '优惠券', icon: '🎫', action: () => { onNavigate('coupon'); onClose() } },
     { label: '秒杀', icon: '⚡', action: () => { onNavigate('flash'); onClose() } },
     { label: '日程', icon: '📅', action: () => { onNavigate('schedule'); onClose() } },

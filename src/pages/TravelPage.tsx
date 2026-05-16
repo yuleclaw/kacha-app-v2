@@ -17,12 +17,12 @@ export default function TravelPage({ onBack, onNavigate }: TravelPageProps) {
   const store = useTravelStore()
   const [showAdd, setShowAdd] = useState(false)
   const [deleteId, setDeleteId] = useState<string | null>(null)
-  const [form, setForm] = useState({ name: '', startDate: '', endDate: '', companions: '', status: 'planning' as string })
+  const [form, setForm] = useState({ name: '', startDate: '', endDate: '', companions: '', status: 'planning' as string, timezone: '' })
 
   const sorted = [...store.items].sort((a, b) => a.startDate.localeCompare(b.startDate))
 
   const openAdd = () => {
-    setForm({ name: '', startDate: '', endDate: '', companions: '', status: 'planning' })
+    setForm({ name: '', startDate: '', endDate: '', companions: '', status: 'planning', timezone: '' })
     setShowAdd(true)
   }
 
@@ -36,6 +36,8 @@ export default function TravelPage({ onBack, onNavigate }: TravelPageProps) {
       days: [],
       companions: form.companions ? form.companions.split(/[,，、\s]+/).filter(Boolean) : [],
       status: form.status as Travel['status'],
+      timezone: form.timezone || undefined,
+      createdAt: Date.now(),
     }
     store.add(data)
     setShowAdd(false)
@@ -96,6 +98,22 @@ export default function TravelPage({ onBack, onNavigate }: TravelPageProps) {
         <div className="form-group">
           <label className="form-label">同行人（用逗号分隔）</label>
           <input className="form-input" value={form.companions} onChange={(e) => setForm({ ...form, companions: e.target.value })} placeholder="张三、李四" />
+        </div>
+        <div className="form-group">
+          <label className="form-label">时区</label>
+          <select className="form-select" value={form.timezone} onChange={(e) => setForm({ ...form, timezone: e.target.value })}>
+            <option value="">中国时间(GMT+8)</option>
+            <option value="Asia/Tokyo">日本(GMT+9)</option>
+            <option value="Asia/Seoul">韩国(GMT+9)</option>
+            <option value="Asia/Singapore">新加坡(GMT+8)</option>
+            <option value="Asia/Bangkok">泰国(GMT+7)</option>
+            <option value="Asia/Dubai">迪拜(GMT+4)</option>
+            <option value="Europe/London">伦敦(GMT+0)</option>
+            <option value="Europe/Paris">巴黎(GMT+1)</option>
+            <option value="America/New_York">纽约(GMT-5)</option>
+            <option value="America/Los_Angeles">洛杉矶(GMT-8)</option>
+            <option value="Australia/Sydney">悉尼(GMT+10)</option>
+          </select>
         </div>
         <div className="form-group">
           <label className="form-label">状态</label>

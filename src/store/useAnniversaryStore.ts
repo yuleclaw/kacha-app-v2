@@ -29,14 +29,15 @@ export const useAnniversaryStore = create<AnniversaryStore>()(
       remove: (id) => set((s) => ({ items: s.items.filter((i) => i.id !== id) })),
       getAll: () => get().items,
       getUpcoming: (limit = 3) => {
-        const items = get().items
-        const withCalc = items.map((a) => {
-          const nextDate = getNextOccurrence(a.date, a.lunar)
-          const days = daysFromToday(nextDate)
-          return { ...a, nextDate, days }
-        })
-        withCalc.sort((a, b) => a.days - b.days)
-        return withCalc.slice(0, limit)
+        return get().items
+          .filter((a) => a.repeatType !== 'none')
+          .map((a) => {
+            const nextDate = getNextOccurrence(a.date, a.lunar)
+            const days = daysFromToday(nextDate)
+            return { ...a, nextDate, days }
+          })
+          .sort((a, b) => a.days - b.days)
+          .slice(0, limit)
       },
     }),
     { name: 'kacha_anniversaries' },

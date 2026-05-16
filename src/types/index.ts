@@ -1,15 +1,18 @@
-// ===== 数据模型 =====
+// ===== 数据模型 v3.5 =====
 
 export interface Anniversary {
   id: string
   title: string
-  date: string // YYYY-MM-DD
-  repeatYearly: boolean
+  date: string // ISO date
+  repeatType: 'yearly' | 'monthly' | 'weekly' | 'custom' | 'none'
+  repeatInterval?: number // 自定义间隔天数
   notifyBefore: number
   notifyEnabled: boolean
   notifyTimes: number[]
   category: 'birthday' | 'love' | 'work' | 'other'
   lunar: boolean
+  imageUrl?: string // 封面图 base64
+  createdAt: number
 }
 
 export interface FlashSale {
@@ -22,37 +25,52 @@ export interface FlashSale {
   productUrl: string
   notifyEnabled: boolean
   notifyMinutesBefore: number[]
+  createdAt: number
 }
 
+/** 物品分类（12种） */
+export type ItemCategory =
+  | 'food' | 'cosmetics' | 'medicine' | 'electronics'
+  | 'appliance' | 'clothing' | 'membership' | 'subscription'
+  | 'warranty' | 'document' | 'other'
+
+export const ITEM_CATEGORY_LABELS: Record<ItemCategory, string> = {
+  food: '食品',
+  cosmetics: '化妆品',
+  medicine: '药品',
+  electronics: '电子产品',
+  appliance: '家电',
+  clothing: '服装',
+  membership: '会员',
+  subscription: '订阅',
+  warranty: '保修',
+  document: '证件',
+  other: '其他',
+}
+
+/** 统一物品项（合并保质期 + 保修期） */
 export interface ExpiryItem {
   id: string
   name: string
-  type: 'food' | 'cosmetic' | 'medicine' | 'other'
+  type: 'shelfLife' | 'warranty'
   expiryDate: string
-  productionDate: string
-  shelfLife: number
+  category: ItemCategory
+  brand?: string
+  imageUrl?: string
   notifyDaysBefore: number
   notifyEnabled: boolean
-  imageUrl: string
-  category: string
-}
-
-export interface WarrantyItem {
-  id: string
-  name: string
-  type: 'electronics' | 'appliance' | 'other'
-  purchaseDate: string
-  warrantyExpiry: string
-  notifyDaysBefore: number
-  notifyEnabled: boolean
-  imageUrl: string
-  notes: string
+  // 保修特有
+  purchaseDate?: string
+  extendedWarranty?: number // 延保月数
+  extendedWarrantyCost?: number
+  notes?: string
+  createdAt: number
 }
 
 export interface Coupon {
   id: string
   name: string
-  source: 'jd' | 'taobao' | 'meituan' | 'starbucks' | 'other'
+  source: 'jd' | 'taobao' | 'meituan' | 'starbucks' | 'eleme' | 'douyin' | 'other'
   discount: string
   condition: string
   expiryDate: string
@@ -60,15 +78,47 @@ export interface Coupon {
   category: string
   imageUrl: string
   notifyEnabled: boolean
+  sourceUrl?: string
+  deepLink?: boolean
+  createdAt: number
 }
 
-export interface Expense {
+export type ExpenseCategory = 'transport' | 'hotel' | 'food' | 'telecom' | 'entertainment' | 'misc'
+
+export const EXPENSE_CATEGORY_LABELS: Record<ExpenseCategory, string> = {
+  transport: '交通',
+  hotel: '住宿',
+  food: '餐饮',
+  telecom: '通讯',
+  entertainment: '招待',
+  misc: '杂费',
+}
+
+export type TransportType = 'train' | 'flight' | 'taxi' | 'self-drive'
+
+export interface ExpenseItem {
   id: string
-  amount: number
-  category: 'food' | 'transport' | 'hotel' | 'office' | 'other'
   date: string
+  category: ExpenseCategory
   description: string
-  imageUrl: string
+  amount: number
+  // 交通字段
+  transportType?: TransportType
+  from?: string
+  to?: string
+  km?: number
+  unitPrice?: number
+  // 餐饮字段
+  subsidyType?: 'standard' | 'special' | 'executive'
+  days?: number
+  // 住宿字段
+  hotelName?: string
+  nights?: number
+  // 发票
+  invoicePhoto?: string // base64
+  invoiceNumber?: string
+  // 其他
+  notes?: string
   status: 'pending' | 'approved' | 'rejected'
   createdAt: number
 }
@@ -85,6 +135,13 @@ export interface Schedule {
   linkedTransport: string
   notifyBefore: number
   notifyEnabled: boolean
+  createdAt: number
+}
+
+export interface TravelExpense {
+  category: string
+  amount: number
+  description: string
 }
 
 export interface Travel {
@@ -95,18 +152,26 @@ export interface Travel {
   days: TravelDay[]
   companions: string[]
   status: 'planning' | 'ongoing' | 'completed'
+  timezone?: string
+  emergencyInfo?: {
+    passport?: string
+    embassyPhone?: string
+    insurance?: string
+  }
+  expenses?: TravelExpense[]
+  createdAt: number
 }
 
 export interface TravelDay {
   id: string
   date: string
-  activities: Activity[]
+  activities: TravelActivity[]
 }
 
-export interface Activity {
+export interface TravelActivity {
   id: string
   time: string
-  type: 'transport' | 'sightseeing' | 'food' | 'hotel' | 'shopping' | 'other'
+  type: 'transport' | 'hotel' | 'food' | 'sightseeing' | 'shopping' | 'other'
   title: string
   description: string
   location: string
@@ -120,7 +185,10 @@ export interface AppSettings {
   dndStart: string
   dndEnd: string
   floatingWindowEnabled: boolean
+  floatingWindowMode: number // 0=时钟 1=倒计时 2=秒表
   ocrServerUrl: string
+  whiteNoiseEnabled: boolean
+  whiteNoiseType: 'rain' | 'ocean' | 'forest' | 'cafe' | 'none'
 }
 
 export const DEFAULT_SETTINGS: AppSettings = {
@@ -131,7 +199,10 @@ export const DEFAULT_SETTINGS: AppSettings = {
   dndStart: '22:00',
   dndEnd: '08:00',
   floatingWindowEnabled: false,
+  floatingWindowMode: 0,
   ocrServerUrl: '',
+  whiteNoiseEnabled: false,
+  whiteNoiseType: 'none',
 }
 
 // ===== 标签映射 =====
@@ -143,58 +214,40 @@ export const PLATFORM_LABELS: Record<string, string> = {
   dewu: '得物',
   meituan: '美团',
   starbucks: '星巴克',
-  other: '其他',
-}
-
-export const CATEGORY_LABELS: Record<string, string> = {
-  birthday: '生日',
-  love: '恋爱',
-  work: '工作',
-  other: '其他',
-  food: '食物',
-  cosmetic: '化妆品',
-  medicine: '药品',
-  electronics: '电子产品',
-  appliance: '家电',
-}
-
-export const EXPENSE_CATEGORY_LABELS: Record<string, string> = {
-  food: '餐饮',
-  transport: '交通',
-  hotel: '酒店',
-  office: '办公',
+  eleme: '饿了么',
+  douyin: '抖音',
   other: '其他',
 }
 
 export const ACTIVITY_TYPE_LABELS: Record<string, string> = {
   transport: '交通',
-  sightseeing: '观光',
+  hotel: '住宿',
   food: '美食',
-  hotel: '酒店',
+  sightseeing: '观光',
   shopping: '购物',
   other: '其他',
+}
+
+export const SUBSIDY_LABELS: Record<string, string> = {
+  standard: '标准(100/天)',
+  special: '特殊(150/天)',
+  executive: '高管(200/天)',
+}
+
+export const TRANSPORT_TYPE_LABELS: Record<string, string> = {
+  train: '火车',
+  flight: '飞机',
+  taxi: '出租车',
+  'self-drive': '自驾',
 }
 
 // ===== 通用类型 =====
 
 export type PageName =
-  | 'home'
-  | 'anniversary'
-  | 'focus'
-  | 'pomodoro'
-  | 'timer'
-  | 'stopwatch'
-  | 'flash'
-  | 'expiry'
-  | 'warranty'
-  | 'coupon'
-  | 'expense'
-  | 'items'
-  | 'schedule'
-  | 'travel'
-  | 'travel-detail'
-  | 'scan'
-  | 'settings'
-  | 'stats'
+  | 'home' | 'anniversary' | 'focus'
+  | 'pomodoro' | 'timer' | 'stopwatch' | 'flash'
+  | 'expiry' | 'coupon' | 'expense'
+  | 'items' | 'schedule' | 'travel' | 'travel-detail'
+  | 'scan' | 'settings' | 'stats'
 
-export type UniversalAddType = 'anniversary' | 'expiry' | 'warranty' | 'coupon' | 'flash' | 'schedule' | 'travel' | 'expense'
+export type UniversalAddType = 'anniversary' | 'expiry' | 'coupon' | 'flash' | 'schedule' | 'travel' | 'expense'

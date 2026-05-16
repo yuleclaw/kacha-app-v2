@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import type { Travel, TravelDay, Activity } from '../types'
+import type { Travel, TravelDay, TravelActivity, TravelExpense } from '../types'
 
 interface TravelStore {
   items: Travel[]
@@ -9,9 +9,10 @@ interface TravelStore {
   remove: (id: string) => void
   getById: (id: string) => Travel | undefined
   addDay: (travelId: string, day: TravelDay) => void
-  addActivity: (travelId: string, dayId: string, activity: Activity) => void
-  updateActivity: (travelId: string, dayId: string, activityId: string, data: Partial<Activity>) => void
+  addActivity: (travelId: string, dayId: string, activity: TravelActivity) => void
+  updateActivity: (travelId: string, dayId: string, activityId: string, data: Partial<TravelActivity>) => void
   removeActivity: (travelId: string, dayId: string, activityId: string) => void
+  addExpense: (travelId: string, expense: TravelExpense) => void
 }
 
 export const useTravelStore = create<TravelStore>()(
@@ -35,12 +36,8 @@ export const useTravelStore = create<TravelStore>()(
         set((s) => ({
           items: s.items.map((t) =>
             t.id === travelId
-              ? {
-                  ...t,
-                  days: t.days.map((d) =>
-                    d.id === dayId ? { ...d, activities: [...d.activities, activity] } : d,
-                  ),
-                }
+              ? { ...t, days: t.days.map((d) =>
+                  d.id === dayId ? { ...d, activities: [...d.activities, activity] } : d) }
               : t,
           ),
         })),
@@ -48,19 +45,11 @@ export const useTravelStore = create<TravelStore>()(
         set((s) => ({
           items: s.items.map((t) =>
             t.id === travelId
-              ? {
-                  ...t,
-                  days: t.days.map((d) =>
-                    d.id === dayId
-                      ? {
-                          ...d,
-                          activities: d.activities.map((a) =>
-                            a.id === activityId ? { ...a, ...data } : a,
-                          ),
-                        }
-                      : d,
-                  ),
-                }
+              ? { ...t, days: t.days.map((d) =>
+                  d.id === dayId
+                    ? { ...d, activities: d.activities.map((a) =>
+                        a.id === activityId ? { ...a, ...data } : a) }
+                    : d) }
               : t,
           ),
         })),
@@ -68,14 +57,18 @@ export const useTravelStore = create<TravelStore>()(
         set((s) => ({
           items: s.items.map((t) =>
             t.id === travelId
-              ? {
-                  ...t,
-                  days: t.days.map((d) =>
-                    d.id === dayId
-                      ? { ...d, activities: d.activities.filter((a) => a.id !== activityId) }
-                      : d,
-                  ),
-                }
+              ? { ...t, days: t.days.map((d) =>
+                  d.id === dayId
+                    ? { ...d, activities: d.activities.filter((a) => a.id !== activityId) }
+                    : d) }
+              : t,
+          ),
+        })),
+      addExpense: (travelId, expense) =>
+        set((s) => ({
+          items: s.items.map((t) =>
+            t.id === travelId
+              ? { ...t, expenses: [...(t.expenses || []), expense] }
               : t,
           ),
         })),

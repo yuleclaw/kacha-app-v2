@@ -1,15 +1,15 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import type { Expense } from '../types'
+import type { ExpenseItem } from '../types'
 
 interface ExpenseStore {
-  items: Expense[]
-  add: (item: Expense) => void
-  update: (id: string, data: Partial<Expense>) => void
+  items: ExpenseItem[]
+  add: (item: ExpenseItem) => void
+  update: (id: string, data: Partial<ExpenseItem>) => void
   remove: (id: string) => void
-  getAll: () => Expense[]
-  getByMonth: (year: number, month: number) => Expense[]
-  getStats: () => { total: number; pending: number; approved: number }
+  getAll: () => ExpenseItem[]
+  getByMonth: (year: number, month: number) => ExpenseItem[]
+  getStats: () => { total: number; pending: number; approved: number; transportKm: number }
 }
 
 export const useExpenseStore = create<ExpenseStore>()(
@@ -31,9 +31,10 @@ export const useExpenseStore = create<ExpenseStore>()(
       getStats: () => {
         const all = get().items
         return {
-          total: all.reduce((sum, i) => sum + i.amount, 0),
-          pending: all.filter((i) => i.status === 'pending').reduce((sum, i) => sum + i.amount, 0),
-          approved: all.filter((i) => i.status === 'approved').reduce((sum, i) => sum + i.amount, 0),
+          total: all.reduce((s, i) => s + i.amount, 0),
+          pending: all.filter((i) => i.status === 'pending').reduce((s, i) => s + i.amount, 0),
+          approved: all.filter((i) => i.status === 'approved').reduce((s, i) => s + i.amount, 0),
+          transportKm: all.filter((i) => i.category === 'transport').reduce((s, i) => s + (i.km || 0), 0),
         }
       },
     }),

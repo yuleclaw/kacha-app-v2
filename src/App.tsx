@@ -7,7 +7,6 @@ import TimerPage from './pages/TimerPage'
 import StopwatchPage from './pages/StopwatchPage'
 import FlashPage from './pages/FlashPage'
 import ExpiryPage from './pages/ExpiryPage'
-import WarrantyPage from './pages/WarrantyPage'
 import CouponPage from './pages/CouponPage'
 import ExpensePage from './pages/ExpensePage'
 import ItemsPage from './pages/ItemsPage'
@@ -21,6 +20,7 @@ import AddPanel from './components/AddPanel'
 import type { PageName } from './types'
 
 export default function App() {
+  console.log('[Kacha] App mounted')
   const [currentPage, setCurrentPage] = useState<PageName>('home')
   const [travelId, setTravelId] = useState('')
   const [scanMode, setScanMode] = useState('auto')
@@ -41,7 +41,7 @@ export default function App() {
 
   const handleBack = () => {
     if (['pomodoro', 'timer', 'stopwatch', 'flash'].includes(currentPage)) navigate('focus')
-    else if (['expiry', 'warranty', 'coupon', 'expense'].includes(currentPage)) navigate('items')
+    else if (['expiry', 'coupon', 'expense'].includes(currentPage)) navigate('items')
     else if (currentPage === 'travel-detail') navigate('travel')
     else if (['scan', 'stats', 'settings', 'anniversary', 'schedule'].includes(currentPage)) navigate('home')
     else navigate('home')
@@ -65,7 +65,6 @@ export default function App() {
       case 'stopwatch': return <StopwatchPage onBack={handleBack} />
       case 'flash': return <FlashPage onBack={handleBack} />
       case 'expiry': return <ExpiryPage onBack={handleBack} />
-      case 'warranty': return <WarrantyPage onBack={handleBack} />
       case 'coupon': return <CouponPage onBack={handleBack} />
       case 'expense': return <ExpensePage onBack={handleBack} />
       case 'items': return <ItemsPage onNavigate={(p) => navigate(p as PageName)} />
@@ -108,7 +107,7 @@ function TabBar({ currentPage, onPress }: { currentPage: string; onPress: (key: 
   const isActive = (key: string) => {
     if (key === 'home') return currentPage === 'home'
     if (key === 'focus') return ['focus', 'pomodoro', 'timer', 'stopwatch', 'flash'].includes(currentPage)
-    if (key === 'items') return ['items', 'expiry', 'warranty', 'coupon', 'expense'].includes(currentPage)
+    if (key === 'items') return ['items', 'expiry', 'coupon', 'expense'].includes(currentPage)
     if (key === 'schedule') return currentPage === 'schedule'
     if (key === 'travel') return ['travel', 'travel-detail'].includes(currentPage)
     return false

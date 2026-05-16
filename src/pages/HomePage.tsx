@@ -4,8 +4,8 @@ import { useAnniversaryStore } from '../store/useAnniversaryStore'
 import { useFlashStore } from '../store/useFlashStore'
 import { useExpiryStore } from '../store/useExpiryStore'
 import { useCouponStore } from '../store/useCouponStore'
-import { useWarrantyStore } from '../store/useWarrantyStore'
 import { useScheduleStore } from '../store/useScheduleStore'
+import { usePomodoroStore } from '../store/usePomodoroStore'
 import { daysFromToday, getCountdownText } from '../utils/date'
 
 interface HomePageProps {
@@ -17,8 +17,9 @@ export default function HomePage({ onNavigate }: HomePageProps) {
   const flashItems = useFlashStore((s) => s.items)
   const expiryItems = useExpiryStore((s) => s.items)
   const couponItems = useCouponStore((s) => s.items)
-  const warrantyItems = useWarrantyStore((s) => s.items)
   const scheduleItems = useScheduleStore((s) => s.items)
+  const pomodoroCompleted = usePomodoroStore((s) => s.completedToday)
+  const [heroMode, setHeroMode] = useState<'anniversary' | 'pomodoro'>('anniversary')
   const [now, setNow] = useState(Date.now())
 
   useEffect(() => {
@@ -36,25 +37,34 @@ export default function HomePage({ onNavigate }: HomePageProps) {
   }).length
 
   const expiredCoupons = couponItems.filter((i) => daysFromToday(i.expiryDate) < 0).length
-  const expiringWarranty = warrantyItems.filter((i) => {
-    const d = daysFromToday(i.warrantyExpiry)
-    return d >= 0 && d <= 30
+  const expiringWarranty = expiryItems.filter((i) => {
+    const d = daysFromToday(i.expiryDate)
+    return d >= 0 && d <= 30 && i.type === 'warranty'
   }).length
 
   const rules: { label: string; count: number; color: string; type: PageName }[] = [
     { label: '即将秒杀', count: flashItems.filter((f) => getCountdownText(f.startTime) !== '已开始' && daysFromToday(f.startTime.split(' ')[0] ?? '') >= -1).length, color: 'var(--color-danger)', type: 'flash' },
     { label: '过期优惠券', count: expiredCoupons, color: 'var(--color-warning)', type: 'coupon' },
     { label: '临期物品', count: expiringExpiry, color: 'var(--color-warning)', type: 'expiry' },
-    { label: '临保定保', count: expiringWarranty, color: 'var(--color-primary)', type: 'warranty' },
+    { label: '临保定保', count: expiringWarranty, color: 'var(--color-primary)', type: 'expiry' },
     { label: '即将纪念日', count: upcoming.length, color: 'var(--color-danger)', type: 'anniversary' },
     { label: '今日日程', count: todaySchedules.length, color: 'var(--color-success)', type: 'schedule' },
   ]
 
   return (
     <div className="page" style={{ paddingTop: 'var(--safe-top)' }}>
-      {/* Hero Section - Anniversary */}
-      <div className="card" style={{ background: 'linear-gradient(135deg, #E8F0FE, #FCEBEB)', border: 'none', marginTop: 8 }}>
-        <div style={{ fontSize: 13, color: 'var(--color-text-secondary)', marginBottom: 8 }}>💜 纪念日</div>
+      {/* Hero Section - Anniversary / Pomodoro toggle */}
+      <div className="card" style={{ background: heroMode === 'anniversary' ? 'linear-gradient(135deg, #E8F0FE, #FCEBEB)' : 'linear-gradient(135deg, #E1F5EE, #E8F0FE)', border: 'none', marginTop: 8 }}>
+        <div className="flex-between" style={{ marginBottom: 8 }}>
+          <div style={{ fontSize: 13, color: 'var(--color-text-secondary)' }}>
+            {heroMode === 'anniversary' ? '💜 纪念日' : '🍅 番茄钟'}
+          </div>
+          <div style={{ display: 'flex', gap: 4 }}>
+            <span className={`tag ${heroMode === 'anniversary' ? 'tag-primary' : ''}`} style={{ cursor: 'pointer', fontSize: 11 }} onClick={() => setHeroMode('anniversary')}>纪念日</span>
+            <span className={`tag ${heroMode === 'pomodoro' ? 'tag-primary' : ''}`} style={{ cursor: 'pointer', fontSize: 11 }} onClick={() => setHeroMode('pomodoro')}>番茄钟</span>
+          </div>
+        </div>
+        {heroMode === 'anniversary' ? (
         <div style={{ display: 'flex', gap: 12, overflowX: 'auto', paddingBottom: 4 }}>
           {upcoming.length === 0 ? (
             <div style={{ fontSize: 14, color: 'var(--color-text-tertiary)', width: '100%', textAlign: 'center', padding: '12px 0' }}>
@@ -71,6 +81,13 @@ export default function HomePage({ onNavigate }: HomePageProps) {
             </div>
           ))}
         </div>
+        ) : (
+          <div style={{ textAlign: 'center', padding: '12px 0' }}>
+            <div style={{ fontSize: 36, fontWeight: 700, color: 'var(--color-success)' }}>{pomodoroCompleted}</div>
+            <div style={{ fontSize: 13, color: 'var(--color-text-secondary)', marginTop: 4 }}>今日完成番茄钟数</div>
+            <button className="btn btn-sm btn-primary" style={{ marginTop: 8 }} onClick={() => onNavigate('pomodoro')}>去专注</button>
+          </div>
+        )}
       </div>
 
       {/* Flash Sales */}
