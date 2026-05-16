@@ -10,9 +10,9 @@
  *   ppocr_keys_v1.txt (26KB)  字典
  *
  * 运行时: public/ort-wasm-simd-threaded.wasm
+ *
+ * 注意: onnxruntime-web 使用动态 import，避免 APP 启动时立即加载 WASM
  */
-
-import * as ort from 'onnxruntime-web'
 
 // ===== 配置常量 =====
 const DET_MAX_SIDE = 736
@@ -33,6 +33,15 @@ export interface PPOCRResult {
   lines: OCRLine[]
   text: string
   elapsed: number
+}
+
+/** 延迟加载 onnxruntime-web */
+let ortModule: any = null
+async function getOrt(): Promise<any> {
+  if (!ortModule) {
+    ortModule = await import('onnxruntime-web')
+  }
+  return ortModule
 }
 
 // ===== 字典加载 =====
@@ -57,7 +66,7 @@ export async function loadDict(): Promise<string[]> {
 }
 
 // ===== 图片预处理 =====
-function preprocessDet(imageData: ImageData): { tensor: ort.Tensor; scale: number; origW: number; origH: number } {
+function preprocessDet(imageData: ImageData): { tensor: any; scale: number; origW: number; origH: number } {
   const { width, height } = imageData
   const origW = width
   const origH = height
@@ -88,7 +97,7 @@ function preprocessDet(imageData: ImageData): { tensor: ort.Tensor; scale: numbe
     }
   }
 
-  return { tensor: new ort.Tensor('float32', chw, [1, 3, newH, newW]), scale, origW, origH, scaleX, scaleY } as any
+  return { tensor: { dims: [1, 3, newH, newW], data: chw }, scale, origW, origH, scaleX, scaleY } as any
 }
 
 function imageDataToCanvas(imgData: ImageData): HTMLCanvasElement {
@@ -163,7 +172,7 @@ function dbPostProcess(probMap: Float32Array, w: number, h: number, scaleX: numb
 async function cropAndPreprocess(
   source: ImageData,
   box: DetBox,
-): Promise<ort.Tensor> {
+): Promise<any> {
   const { xmin, ymin, xmax, ymax } = box
   const cropW = Math.max(xmax - xmin, 8)
   const cropH = Math.max(ymax - ymin, 8)
@@ -197,7 +206,7 @@ async function cropAndPreprocess(
     }
   }
 
-  return new ort.Tensor('float32', chw, [1, 3, REC_HEIGHT, actualW])
+  return { dims: [1, 3, REC_HEIGHT, actualW], data: chw }
 }
 
 // ===== CTC 解码 =====
@@ -250,11 +259,12 @@ function filterJapanese(text: string): string {
 }
 
 // ===== 主推理函数 =====
-let detSession: ort.InferenceSession | null = null
-let recSession: ort.InferenceSession | null = null
-let clsSession: ort.InferenceSession | null = null
+let detSession: any = null
+let recSession: any = null
+let clsSession: any = null
 
-async function initSession(path: string): Promise<ort.InferenceSession> {
+async function initSession(path: string): Promise<any> {
+  const ort = await getOrt()
   ort.env.wasm.wasmPaths = '/'
   return await ort.InferenceSession.create(path, {
     executionProviders: ['wasm'],
@@ -289,8 +299,9 @@ export async function recognizePPOCR(imageData: ImageData): Promise<PPOCRResult>
   const { tensor: detInput, origW, origH, scaleX, scaleY } = preprocessDet(imageData) as any
 
   // Step 2: 检测推理
-  const detFeeds: Record<string, ort.Tensor> = {}
-  detFeeds[detSession!.inputNames[0]] = detInput
+  const ort = await getOrt()
+  const detFeeds: Record<string, any> = {}
+  detFeeds[detSession!.inputNames[0]] = new ort.Tensor('float32', detInput.data, detInput.dims)
   const detResult = await detSession!.run(detFeeds)
   const probMap = detResult[detSession!.outputNames[0]].data as Float32Array
   const outW = detInput.dims[3]
@@ -324,8 +335,8 @@ export async function recognizePPOCR(imageData: ImageData): Promise<PPOCRResult>
     const recInput = await cropAndPreprocess(imageData, box)
 
     // 识别推理
-    const recFeeds: Record<string, ort.Tensor> = {}
-    recFeeds[recSession!.inputNames[0]] = recInput
+    const recFeeds: Record<string, any> = {}
+    recFeeds[recSession!.inputNames[0]] = new ort.Tensor('float32', recInput.data, recInput.dims)
     const recResult = await recSession!.run(recFeeds)
     const pred = recResult[recSession!.outputNames[0]].data as Float32Array
     const seqLen = recInput.dims[3]
