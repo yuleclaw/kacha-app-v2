@@ -5,12 +5,15 @@ import FloatingWindow from '../components/FloatingWindow'
 import { useSettingsStore } from '../store/useSettingsStore'
 import { exportAllData, importAllData } from '../utils/storage'
 import { setLanguage, getLanguage } from '../utils/i18n'
+import { usePomodoroStore } from '../store/usePomodoroStore'
 
 interface SettingsPageProps { onBack: () => void }
 
 export default function SettingsPage({ onBack }: SettingsPageProps) {
   const settings = useSettingsStore((s) => s.settings)
   const updateSettings = useSettingsStore((s) => s.update)
+  const setWorkMinPomo = usePomodoroStore((s) => s.setWorkMinutes)
+  const setBreakMinPomo = usePomodoroStore((s) => s.setBreakMinutes)
   const [workMin, setWorkMin] = useState(settings.pomodoroWork)
   const [breakMin, setBreakMin] = useState(settings.pomodoroBreak)
   const [ocrUrl, setOcrUrl] = useState(settings.ocrServerUrl)
@@ -55,9 +58,9 @@ export default function SettingsPage({ onBack }: SettingsPageProps) {
         <div className="card">
           <div className="card-title mb-sm">番茄钟设置</div>
           <div className="form-group"><label className="form-label">工作时长(分钟)</label>
-            <input className="form-input" type="number" min={1} max={120} value={workMin} onChange={(e) => { const v = parseInt(e.target.value) || 25; setWorkMin(v); updateSettings({ pomodoroWork: v }) }} /></div>
+            <input className="form-input" type="number" min={1} max={120} value={workMin} onChange={(e) => { const v = parseInt(e.target.value) || 25; setWorkMin(v); updateSettings({ pomodoroWork: v }); setWorkMinPomo(v) }} /></div>
           <div className="form-group"><label className="form-label">休息时长(分钟)</label>
-            <input className="form-input" type="number" min={1} max={60} value={breakMin} onChange={(e) => { const v = parseInt(e.target.value) || 5; setBreakMin(v); updateSettings({ pomodoroBreak: v }) }} /></div>
+            <input className="form-input" type="number" min={1} max={60} value={breakMin} onChange={(e) => { const v = parseInt(e.target.value) || 5; setBreakMin(v); updateSettings({ pomodoroBreak: v }); setBreakMinPomo(v) }} /></div>
         </div>
         {/* Theme */}
         <div className="card">

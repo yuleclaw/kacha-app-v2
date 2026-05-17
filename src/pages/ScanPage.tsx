@@ -1,6 +1,6 @@
 ﻿import { useState, useRef } from 'react'
 import PageHeader from '../components/PageHeader'
-import { recognizeImage } from '../utils/ocr'
+import { recognizeImage, guessOcrType } from '../utils/ocr'
 import { useSettingsStore } from '../store/useSettingsStore'
 import type { PageName } from '../types'
 
@@ -61,7 +61,8 @@ export default function ScanPage({ mode, onBack, onRecognized }: ScanPageProps) 
 
   const handlePaste = () => {
     if (!result.trim()) return
-    const target = currentMode !== 'auto' ? currentMode : guessType(result, 'auto')
+    const guessed = guessOcrType(result)
+    const target = currentMode !== 'auto' ? currentMode : (guessed !== 'unknown' ? guessed : 'auto')
     if (target !== 'auto') { onRecognized(target as PageName) }
     else { alert('\u672a\u80fd\u8bc6\u522b\u7c7b\u578b') }
   }
@@ -117,15 +118,4 @@ export default function ScanPage({ mode, onBack, onRecognized }: ScanPageProps) 
       </div>
     </>
   )
-}
-
-function guessType(text: string, fallback: string): string {
-  const t = text.toLowerCase()
-  if (t.indexOf('coupon') !== -1 || t.indexOf('discount') !== -1) return 'coupon'
-  if (t.indexOf('flash') !== -1 || t.indexOf('sale') !== -1) return 'flash'
-  if (t.indexOf('schedule') !== -1 || t.indexOf('meeting') !== -1) return 'schedule'
-  if (t.indexOf('travel') !== -1 || t.indexOf('flight') !== -1) return 'travel'
-  if (t.indexOf('warranty') !== -1 || t.indexOf('guarantee') !== -1) return 'expiry'
-  if (t.indexOf('anniversary') !== -1 || t.indexOf('birthday') !== -1) return 'anniversary'
-  return fallback
 }

@@ -5,9 +5,9 @@ import Modal from '../components/Modal'
 import { useExpiryStore } from '../store/useExpiryStore'
 import { formatDate, daysFromToday, daysLabel } from '../utils/date'
 import { ITEM_CATEGORY_LABELS } from '../types'
+import { genId } from '../utils/id'
 import type { ExpiryItem, ItemCategory } from '../types'
 
-function genId(): string { return Date.now().toString(36) + Math.random().toString(36).slice(2, 6) }
 interface ExpiryPageProps { onBack: () => void }
 
 export default function ExpiryPage({ onBack }: ExpiryPageProps) {

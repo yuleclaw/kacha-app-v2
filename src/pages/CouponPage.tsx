@@ -7,9 +7,9 @@ import { useCouponStore } from '../store/useCouponStore'
 import { formatDate, daysFromToday, daysLabel } from '../utils/date'
 import { PLATFORM_LABELS } from '../types'
 import { copyToClipboard, openDeepLink } from '../utils/deepLink'
+import { genId } from '../utils/id'
 import type { Coupon } from '../types'
 
-function genId(): string { return Date.now().toString(36) + Math.random().toString(36).slice(2, 6) }
 interface CouponPageProps { onBack: () => void }
 
 const SOURCES = ['jd', 'taobao', 'meituan', 'starbucks', 'eleme', 'douyin', 'other'] as const

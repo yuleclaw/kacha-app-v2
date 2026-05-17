@@ -6,9 +6,9 @@ import { useFlashStore } from '../store/useFlashStore'
 import { formatDateTime, getCountdownText, isFlashSoon } from '../utils/date'
 import { PLATFORM_LABELS } from '../types'
 import { openDeepLink, copyToClipboard } from '../utils/deepLink'
+import { genId } from '../utils/id'
 import type { FlashSale } from '../types'
 
-function genId(): string { return Date.now().toString(36) + Math.random().toString(36).slice(2, 6) }
 interface FlashPageProps { onBack: () => void }
 
 const PLATFORMS = ['jd', 'taobao', 'pinduoduo', 'dewu'] as const

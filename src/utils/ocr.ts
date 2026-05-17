@@ -16,7 +16,7 @@ export interface OcrProgress {
   progress: number
 }
 
-export type OcrType = 'coupon' | 'flash' | 'schedule' | 'travel' | 'warranty' | 'anniversary' | 'unknown'
+export type OcrType = 'coupon' | 'flash' | 'schedule' | 'travel' | 'expiry' | 'anniversary' | 'unknown'
 
 export interface OcrResult {
   text: string
@@ -45,14 +45,15 @@ async function recognizeCloud(imageBase64: string, cloudUrl: string, timeoutMs =
 }
 
 /** 智能分类识别文本 */
-function classifyText(text: string): OcrType {
-  const t = text.trim().toLowerCase()
+export function guessOcrType(text: string): OcrType {
+  const t = text.toLowerCase()
+  // 中文关键词
   if (t.indexOf('券') !== -1 || t.indexOf('优惠') !== -1 || t.indexOf('折扣') !== -1 || t.indexOf('满减') !== -1 || t.indexOf('代金') !== -1) return 'coupon'
-  if (t.indexOf('秒杀') !== -1 || t.indexOf('抢购') !== -1 || t.indexOf('闪购') !== -1 || t.indexOf('¥') !== -1 || t.indexOf('￥') !== -1) return 'flash'
+  if (t.indexOf('秒杀') !== -1 || t.indexOf('抢购') !== -1 || t.indexOf('闪购') !== -1) return 'flash'
   if (t.indexOf('日程') !== -1 || t.indexOf('会议') !== -1 || t.indexOf('预约') !== -1 || t.indexOf('会见') !== -1) return 'schedule'
   if (t.indexOf('旅行') !== -1 || t.indexOf('行程') !== -1 || t.indexOf('航班') !== -1 || t.indexOf('高铁') !== -1 || t.indexOf('酒店') !== -1) return 'travel'
-  if (t.indexOf('保修') !== -1 || t.indexOf('售后') !== -1 || t.indexOf('维修') !== -1 || t.indexOf('保') !== -1 && t.indexOf('年') !== -1) return 'warranty'
-  if (t.indexOf('纪念') !== -1 || t.indexOf('生日') !== -1 || t.indexOf('周年') !== -1) return 'anniversary'
+  if (t.indexOf('保修') !== -1 || t.indexOf('售后') !== -1 || t.indexOf('维修') !== -1 || t.indexOf('guarantee') !== -1) return 'expiry'
+  if (t.indexOf('纪念') !== -1 || t.indexOf('生日') !== -1 || t.indexOf('周年') !== -1 || t.indexOf('birthday') !== -1) return 'anniversary'
   return 'unknown'
 }
 
@@ -92,7 +93,7 @@ export async function recognizeImage(
     const localResult: PPOCRResult = await recognizePPOCR(imageData)
 
     if (localResult.text.trim()) {
-      const type = classifyText(localResult.text)
+      const type = guessOcrType(localResult.text)
       return {
         text: localResult.text,
         type,
@@ -113,7 +114,7 @@ export async function recognizeImage(
 
       const cloudText = await recognizeCloud(base64, cloudOcrUrl)
       if (cloudText.trim()) {
-        const type = classifyText(cloudText)
+        const type = guessOcrType(cloudText)
         return { text: cloudText, type, confidence: 0.95, source: 'cloud' }
       }
     }

@@ -4,9 +4,8 @@ import ConfirmDialog from '../components/ConfirmDialog'
 import Modal from '../components/Modal'
 import { useAnniversaryStore, type UpcomingAnniversary } from '../store/useAnniversaryStore'
 import { formatDate, getLunarMonthDay } from '../utils/date'
+import { genId } from '../utils/id'
 import type { Anniversary } from '../types'
-
-function genId(): string { return Date.now().toString(36) + Math.random().toString(36).slice(2, 6) }
 
 interface AnniversaryPageProps { onBack: () => void }
 
