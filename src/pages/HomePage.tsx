@@ -43,7 +43,7 @@ export default function HomePage({ onNavigate }: HomePageProps) {
   }).length
 
   const rules: { label: string; count: number; color: string; type: PageName }[] = [
-    { label: '即将秒杀', count: flashItems.filter((f) => getCountdownText(f.startTime) !== '已开始' && daysFromToday(f.startTime.split(' ')[0] ?? '') >= -1).length, color: 'var(--color-danger)', type: 'flash' },
+    { label: '即将秒杀', count: flashItems.filter((f) => getCountdownText(f.startTime) !== '已开始' && daysFromToday(f.startTime?.split(' ')[0] ?? '') >= -1).length, color: 'var(--color-danger)', type: 'flash' },
     { label: '过期优惠券', count: expiredCoupons, color: 'var(--color-warning)', type: 'coupon' },
     { label: '临期物品', count: expiringExpiry, color: 'var(--color-warning)', type: 'expiry' },
     { label: '临保定保', count: expiringWarranty, color: 'var(--color-primary)', type: 'expiry' },
@@ -54,7 +54,7 @@ export default function HomePage({ onNavigate }: HomePageProps) {
   return (
     <div className="page" style={{ paddingTop: 'var(--safe-top)' }}>
       {/* Hero Section - Anniversary / Pomodoro toggle */}
-      <div className="card" style={{ background: heroMode === 'anniversary' ? 'linear-gradient(135deg, #E8F0FE, #FCEBEB)' : 'linear-gradient(135deg, #E1F5EE, #E8F0FE)', border: 'none', marginTop: 8 }}>
+      <div className="card" style={{ background: heroMode === 'anniversary' ? 'linear-gradient(135deg, var(--color-bg-secondary), var(--color-bg-primary))' : 'linear-gradient(135deg, var(--color-bg-primary), var(--color-bg-secondary))', border: 'none', marginTop: 8 }}>
         <div className="flex-between" style={{ marginBottom: 8 }}>
           <div style={{ fontSize: 13, color: 'var(--color-text-secondary)' }}>
             {heroMode === 'anniversary' ? '💜 纪念日' : '🍅 番茄钟'}

@@ -83,7 +83,7 @@ export function getNextLunarDate(dateStr: string): string {
     const d = parseISO(dateStr)
     const solar = Solar.fromDate(d)
     const lunar = solar.getLunar()
-    const nextLunar = LunarCalendar.fromYmd(lunar.getYear() + 1, lunar.getMonth(), lunar.getDay())
+    const nextLunar = LunarCalendar.fromYmd(lunar.getYear() + 1, Math.abs(lunar.getMonth()), lunar.getDay())
     const nextSolar = nextLunar.getSolar()
     return `${nextSolar.getYear()}-${String(nextSolar.getMonth()).padStart(2, '0')}-${String(nextSolar.getDay()).padStart(2, '0')}`
   } catch {
@@ -97,11 +97,25 @@ export function getNextOccurrence(dateStr: string, lunar: boolean): string {
     const d = parseISO(dateStr)
     const thisYear = format(d, 'MM-dd')
     const now = new Date()
-    const thisYearDate = parseISO(`${now.getFullYear()}-${thisYear}`)
-    if (isPast(thisYearDate) && !isToday(thisYearDate)) {
-      return `${now.getFullYear() + 1}-${thisYear}`
+    const year = now.getFullYear()
+    // 避免闰年2月29日问题：如果今年不是闰年但日期是02-29，跳到明年
+    let thisYearDate: Date
+    if (thisYear === '02-29') {
+      const isLeap = (year % 4 === 0 && year % 100 !== 0) || (year % 400 === 0)
+      if (!isLeap) {
+        const nextLeapYear = year + 4 - (year % 4)
+        thisYearDate = parseISO(`${nextLeapYear}-02-29`)
+        if (isPast(thisYearDate) && !isToday(thisYearDate)) {
+          return `${nextLeapYear + 4}-02-29`
+        }
+        return `${nextLeapYear}-02-29`
+      }
     }
-    return `${now.getFullYear()}-${thisYear}`
+    thisYearDate = parseISO(`${year}-${thisYear}`)
+    if (isPast(thisYearDate) && !isToday(thisYearDate)) {
+      return `${year + 1}-${thisYear}`
+    }
+    return `${year}-${thisYear}`
   }
   return getNextLunarDate(dateStr)
 }

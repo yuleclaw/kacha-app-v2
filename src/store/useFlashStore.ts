@@ -22,6 +22,21 @@ export const useFlashStore = create<FlashStore>()(
       remove: (id) => set((s) => ({ items: s.items.filter((i) => i.id !== id) })),
       getAll: () => get().items,
     }),
-    { name: 'kacha_flash' },
+    {
+      name: 'kacha_flash',
+      version: 1,
+      migrate: (persisted: any, version: number) => {
+        if (version === 0) {
+          return {
+            ...persisted,
+            items: (persisted.items || []).map((item: any) => ({
+              ...item,
+              createdAt: item.createdAt || Date.now(),
+            })),
+          }
+        }
+        return persisted as FlashStore
+      },
+    },
   ),
 )

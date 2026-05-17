@@ -73,6 +73,21 @@ export const useTravelStore = create<TravelStore>()(
           ),
         })),
     }),
-    { name: 'kacha_travel' },
+    {
+      name: 'kacha_travel',
+      version: 1,
+      migrate: (persisted: any, version: number) => {
+        if (version === 0) {
+          return {
+            ...persisted,
+            items: (persisted.items || []).map((item: any) => ({
+              ...item,
+              createdAt: item.createdAt || Date.now(),
+            })),
+          }
+        }
+        return persisted as TravelStore
+      },
+    },
   ),
 )

@@ -1,3 +1,4 @@
+import { useMemo } from 'react'
 import PageHeader from '../components/PageHeader'
 import { useAnniversaryStore } from '../store/useAnniversaryStore'
 import { useExpiryStore } from '../store/useExpiryStore'
@@ -29,6 +30,8 @@ export default function StatsPage({ onBack }: StatsPageProps) {
     }
   })
 
+  const expenseItems = useExpenseStore((s) => s.items)
+
   const expiry = useExpiryStore((s) => s.items)
   const expired = expiry.filter((i) => new Date(i.expiryDate) < new Date()).length
   const soon = expiry.filter((i) => { const d = new Date(i.expiryDate); const diff = Math.ceil((d.getTime() - Date.now()) / 86400000); return diff >= 0 && diff <= 7 }).length
@@ -37,6 +40,15 @@ export default function StatsPage({ onBack }: StatsPageProps) {
   const coupons = useCouponStore((s) => s.items)
   const expiredCoupons = coupons.filter((i) => new Date(i.expiryDate) < new Date()).length
   const validCoupons = coupons.length - expiredCoupons
+
+  const pieData = useMemo(() => {
+    const cats = [...new Set(expenseItems.map(i => i.category))]
+    return cats.map((cat, i) => ({
+      name: EXPENSE_CATEGORY_LABELS[cat as keyof typeof EXPENSE_CATEGORY_LABELS] || cat,
+      value: expenseItems.filter(i => i.category === cat).reduce((s, i) => s + i.amount, 0),
+      fill: COLORS[i % COLORS.length],
+    }))
+  }, [expenseItems])
 
   return (
     <>
@@ -102,15 +114,7 @@ export default function StatsPage({ onBack }: StatsPageProps) {
             <div className="card-title mb-sm">报销分类</div>
             <div style={{ width: '100%', height: 200 }}>
               <PieChart width={500} height={200}>
-                <Pie data={(() => {
-                  const allItems = useExpenseStore.getState().items
-                  const cats = [...new Set(allItems.map(i => i.category))]
-                  return cats.map((cat, i) => ({
-                    name: EXPENSE_CATEGORY_LABELS[cat as keyof typeof EXPENSE_CATEGORY_LABELS] || cat,
-                    value: allItems.filter(i => i.category === cat).reduce((s, i) => s + i.amount, 0),
-                    fill: COLORS[i % COLORS.length],
-                  }))
-                })()} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={70} label={({ name }) => name} fontSize={11}>
+                <Pie data={pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={70} label={({ name }) => name} fontSize={11}>
                   {COLORS.map((c, i) => <Cell key={i} fill={c} />)}
                 </Pie>
                 <Tooltip />

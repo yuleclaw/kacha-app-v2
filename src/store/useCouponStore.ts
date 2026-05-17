@@ -29,6 +29,24 @@ export const useCouponStore = create<CouponStore>()(
       getExpiringSoon: (days = 7) => get().items.filter((i) => isExpiringSoon(i.expiryDate, days)),
       getAvailable: () => get().items.filter((i) => !isExpired(i.expiryDate)),
     }),
-    { name: 'kacha_coupon' },
+    {
+      name: 'kacha_coupon',
+      version: 1,
+      migrate: (persisted: any, version: number) => {
+        if (version === 0) {
+          return {
+            ...persisted,
+            items: (persisted.items || []).map((item: any) => ({
+              ...item,
+              createdAt: item.createdAt || Date.now(),
+              imageUrl: item.imageUrl || '',
+              sourceUrl: item.sourceUrl || '',
+              deepLink: item.deepLink || '',
+            })),
+          }
+        }
+        return persisted as CouponStore
+      },
+    },
   ),
 )

@@ -1,4 +1,3 @@
-// DEPRECATED — Warranty store removed in v3.5 upgrade.
-// Previously stored warranty/guarantee records.
-// No longer in use. Import nothing, export nothing.
+// DEPRECATED — Warranty merged into ExpiryItem (v3.5 upgrade).
+// This file kept for data migration. No new code should use it.
 export {}

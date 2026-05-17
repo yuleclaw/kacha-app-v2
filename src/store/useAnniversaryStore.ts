@@ -40,6 +40,21 @@ export const useAnniversaryStore = create<AnniversaryStore>()(
           .slice(0, limit)
       },
     }),
-    { name: 'kacha_anniversaries' },
+    {
+      name: 'kacha_anniversaries',
+      version: 1,
+      migrate: (persisted: any, version: number) => {
+        if (version === 0) {
+          return {
+            ...persisted,
+            items: (persisted.items || []).map((item: any) => ({
+              ...item,
+              createdAt: item.createdAt || Date.now(),
+            })),
+          }
+        }
+        return persisted as AnniversaryStore
+      },
+    },
   ),
 )
