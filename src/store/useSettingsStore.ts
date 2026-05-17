@@ -18,16 +18,6 @@ export const useSettingsStore = create<SettingsStore>()(
     }),
     {
       name: 'kacha_settings',
-      version: 1,
-      migrate: (persisted: any, version: number) => {
-        if (version === 0) {
-          return {
-            ...persisted,
-            settings: { ...DEFAULT_SETTINGS, ...(persisted.settings || {}) },
-          }
-        }
-        return persisted as SettingsStore
-      },
     },
   ),
 )

@@ -31,22 +31,6 @@ export const useCouponStore = create<CouponStore>()(
     }),
     {
       name: 'kacha_coupon',
-      version: 1,
-      migrate: (persisted: any, version: number) => {
-        if (version === 0) {
-          return {
-            ...persisted,
-            items: (persisted.items || []).map((item: any) => ({
-              ...item,
-              createdAt: item.createdAt || Date.now(),
-              imageUrl: item.imageUrl || '',
-              sourceUrl: item.sourceUrl || '',
-              deepLink: item.deepLink || '',
-            })),
-          }
-        }
-        return persisted as CouponStore
-      },
     },
   ),
 )

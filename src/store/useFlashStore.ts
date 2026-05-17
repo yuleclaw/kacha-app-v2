@@ -24,19 +24,6 @@ export const useFlashStore = create<FlashStore>()(
     }),
     {
       name: 'kacha_flash',
-      version: 1,
-      migrate: (persisted: any, version: number) => {
-        if (version === 0) {
-          return {
-            ...persisted,
-            items: (persisted.items || []).map((item: any) => ({
-              ...item,
-              createdAt: item.createdAt || Date.now(),
-            })),
-          }
-        }
-        return persisted as FlashStore
-      },
     },
   ),
 )

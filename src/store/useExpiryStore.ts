@@ -4,7 +4,6 @@ import type { ExpiryItem } from '../types'
 import { isExpired, isExpiringSoon } from '../utils/date'
 
 interface ExpiryStore {
-  _version?: number
   items: ExpiryItem[]
   add: (item: ExpiryItem) => void
   update: (id: string, data: Partial<ExpiryItem>) => void
@@ -19,7 +18,6 @@ interface ExpiryStore {
 export const useExpiryStore = create<ExpiryStore>()(
   persist(
     (set, get) => ({
-      _version: 1,
       items: [],
       add: (item) => set((s) => ({ items: [...s.items, item] })),
       update: (id, data) =>
@@ -35,22 +33,6 @@ export const useExpiryStore = create<ExpiryStore>()(
     }),
     {
       name: 'kacha_expiry',
-      version: 1,
-      migrate: (persisted: any, version: number) => {
-        // Version 0 -> 1: ensure all items have type field
-        if (version === 0) {
-          return {
-            _version: 1,
-            items: (persisted.items || []).map((item: any) => ({
-              ...item,
-              type: item.type || 'shelfLife',
-              category: item.category || 'other',
-              createdAt: item.createdAt || Date.now(),
-            })),
-          }
-        }
-        return persisted as ExpiryStore
-      },
     },
   ),
 )

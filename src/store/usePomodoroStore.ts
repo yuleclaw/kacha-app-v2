@@ -31,12 +31,10 @@ const DEFAULT_BREAK = 5
 export const usePomodoroStore = create<PomodoroStore>()(
   persist(
     (set, get) => ({
-      // Persisted state
       mode: 'work',
       status: 'idle',
       workMinutes: DEFAULT_WORK,
       breakMinutes: DEFAULT_BREAK,
-      // Non-persisted (transient, restored on app start)
       secondsLeft: DEFAULT_WORK * 60,
       completedToday: 0,
       whiteNoiseType: 'none',
@@ -59,7 +57,6 @@ export const usePomodoroStore = create<PomodoroStore>()(
     }),
     {
       name: 'kacha_pomodoro',
-      // Only persist settings, not running state
       partialize: (state) => ({
         workMinutes: state.workMinutes,
         breakMinutes: state.breakMinutes,
@@ -67,14 +64,6 @@ export const usePomodoroStore = create<PomodoroStore>()(
         whiteNoiseType: state.whiteNoiseType,
         whiteNoiseEnabled: state.whiteNoiseEnabled,
       }),
-      // On rehydrate, restore secondsLeft from persisted workMinutes
-      onRehydrateStorage: () => (state) => {
-        if (state) {
-          state.secondsLeft = state.workMinutes * 60
-          state.mode = 'work'
-          state.status = 'idle'
-        }
-      },
     },
   ),
 )
